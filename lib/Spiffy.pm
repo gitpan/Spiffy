@@ -3,15 +3,21 @@ use strict;
 use 5.006_001;
 use warnings;
 use Carp;
-our $VERSION = '0.17';
+require Exporter;
+our $VERSION = '0.18';
 our @EXPORT = ();
 our @EXPORT_OK = qw(id WWW XXX YYY ZZZ);
+our @EXPORT_BASE = qw(
+    field const stub super WWW XXX YYY ZZZ
+);
 our %EXPORT_TAGS = (XXX => [qw(WWW XXX YYY ZZZ)]);
 
 my $class_map = {};
 my $options_map = {};
 my $stack_frame = 0; 
 my $dump = 'yaml';
+
+sub WWW; sub XXX; sub YYY; sub ZZZ;
 
 sub UNIVERSAL::is_spiffy {
     my $self = shift;
@@ -31,59 +37,83 @@ my $filtered_files = {};
 sub import {
     no strict 'refs'; 
     no warnings;
-    local(@EXPORT, *spiffy_constructor);
+    local(*spiffy_constructor);
     my $self_package = shift;
-    my ($args, @values) = do {
-        local *boolean_arguments = sub { qw(-base -Base -dumper -yaml) };
+
+    my ($args, @export_list) = do {
+        local *boolean_arguments = sub { 
+            qw(-base -Base -selfless -dumper -yaml) 
+        };
         local *paired_arguments = sub { qw(-package) };
         $self_package->parse_arguments(@_);
     };
+
     $dump = 'yaml' if $args->{-yaml};
     $dump = 'dumper' if $args->{-dumper};
+
+    spiffy_filter() if $args->{-selfless} and 
+      not $filtered_files->{(caller($stack_frame))[1]}++;
+
     my $caller_package = $args->{-package} || caller($stack_frame);
     if ($args->{-Base} or $args->{-base}) {
         push @{"${caller_package}::ISA"}, $self_package;
         spiffy_filter() if $args->{-Base} and 
           not $filtered_files->{(caller($stack_frame))[1]}++;
-        @EXPORT = qw(field const stub super WWW XXX YYY ZZZ);
-        *spiffy_constructor = 
-          $self_package->spiffy_constructor_maker($caller_package);
-        push @EXPORT, 'spiffy_constructor'
-          unless defined &{"$caller_package\::spiffy_constructor"};
+        *{"${caller_package}::spiffy_constructor"} =
+          $self_package->spiffy_constructor_maker($caller_package)
+            unless defined &{"${caller_package}::spiffy_constructor"};
     }
-    require Exporter;
-    for my $class (reverse $self_package->all_my_bases) {
+
+    for my $class (all_my_bases($self_package)) {
         next unless $class->isa('Spiffy');
         for my $sub (@{"$class\::EXPORT"}) {
             $class_map->{$caller_package}{$sub} = $self_package;
             $options_map->{$caller_package}{$sub} = [@_];
         }
-        my %exportable = map {($_, 1)} 
-          @{"$class\::EXPORT"}, @{"$class\::EXPORT_OK"};
-        my @export_values = grep {
+        my @export = grep {
+            not defined &{"$caller_package\::$_"};
+        } ( @{"$class\::EXPORT"}, 
+            ($args->{-Base} or $args->{-base})
+              ? @{"$class\::EXPORT_BASE"} : (),
+          );
+        my @export_ok = grep {
+            not defined &{"$caller_package\::$_"};
+        } @{"$class\::EXPORT_OK"};
+        my %exportable = map { ($_, 1) } @export, @export_ok;
+        next unless keys %exportable;
+        my @export_save = @{"$class\::EXPORT"};
+        my @export_ok_save = @{"$class\::EXPORT_OK"};
+        @{"$class\::EXPORT"} = @export;
+        @{"$class\::EXPORT_OK"} = @export_ok;
+        my @list = grep {
             (my $v = $_) =~ s/^[\!\:]//;
             $exportable{$v} or ${"$class\::EXPORT_TAGS"}{$v};
-        } @values;
-        Exporter::export($class, $caller_package, @export_values);
+        } @export_list;
+        Exporter::export($class, $caller_package, @list);
+        @{"$class\::EXPORT"} = @export_save;
+        @{"$class\::EXPORT_OK"} = @export_ok_save;
     }
 }
 
 sub spiffy_filter {
-    eval q{use Filter::Util::Call}; die $@ if $@;
-    filter_add([1]);
-}
-
-sub filter {
-    my $self = shift;
-    return 0 unless $self->[0];
-    my $status;
-    while (($status = filter_read(4096)) > 0) { }
-    if ($status == 0) {
-        s/^(sub\s+\w+\s+\{)(.*\n)/${1}my \$self = shift;$2/mg;
-        s/^(sub\s+\w+)\s*\(\s*\)(\s+\{.*\n)/${1}${2}/mg
-    }
-    $self->[0] = 0;
-    1;
+    require Filter::Util::Call;
+    my $done = 0;
+    Filter::Util::Call::filter_add(
+        sub {
+            return 0 if $done;
+            my $data;
+            while (my $status = Filter::Util::Call::filter_read()) {
+                return $status if $status < 0;
+                $data .= $_;
+                last if /^__(?:END|DATA)__\r?$/;
+                $_ = '';
+            }
+            $_ = $data;
+            s/^(sub\s+\w+\s+\{)(.*\n)/${1}my \$self = shift;$2/mg;
+            s/^(sub\s+\w+)\s*\(\s*\)(\s+\{.*\n)/${1}${2}/mg;
+            $done = 1;
+        }
+    );
 }
 
 sub base {
@@ -96,7 +126,7 @@ sub all_my_bases {
     my @bases = ($class);
     no strict 'refs';
     for my $base_class (@{"${class}::ISA"}) {
-        push @bases, $base_class->all_my_bases;
+        push @bases, all_my_bases($base_class);
     }
     my $used = {};
     my @x = grep {not $used->{$_}++} @bases;
@@ -242,7 +272,7 @@ sub super {
     my $seen = 0;
     my @super_classes = reverse grep {
         ($seen or $seen = ($_ eq $caller_class)) ? 0 : 1;
-    } reverse $class->all_my_bases;
+    } reverse all_my_bases($class);
     for my $super_class (@super_classes) {
         no strict 'refs';
         next if $super_class eq $class;
@@ -469,9 +499,11 @@ comprise the export specification.
     use Spiffy '-base';
     our $SERIAL_NUMBER = 0;
     our @EXPORT = qw($SERIAL_NUMBER);
+    our @EXPORT_BASE = qw(tire horn);
 
     package Bicycle;
     use Vehicle '-base', '!field';
+    $self->inflate(tire);
 
 In this case, C<Bicycle->isa('Vehicle')> and also all the things
 that C<Vehicle> and C<Spiffy> export, will go into C<Bicycle>,
@@ -481,6 +513,11 @@ Exporting can be very helpful when you've designed a system with
 hundreds of classes, and you want them all to have access to some
 functions or constants or variables. Just export them in your main base
 class and every subclass will get the functions they need.
+
+You can do almost everything that Exporter does because Spiffy delegates
+the job to Exporter (after adding some Spiffy magic). Spiffy offers a
+C<@EXPORT_BASE> variable which is like C<@EXPORT>, but only for usages
+that use C<-base>.
 
 =head1 Spiffy FILTERING
 

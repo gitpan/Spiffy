@@ -88,8 +88,8 @@ DESCRIPTION
     which class to use. All the arguments you pass to the generated
     function, get passed on to each invocation of the constructor. In
     addition, all the arguments you passed in the use statement for that
-    class, also get passed to the constructor. The "io()" function of
-    IO::All is a good example of using "spiffy_constructor".
+    class also get passed to the constructor. The "io()" function of IO::All
+    is a good example of using "spiffy_constructor".
 
     Spiffy has a special method for parsing arguments called
     "parse_arguments", that it also uses for parsing its own arguments. You
@@ -102,13 +102,14 @@ DESCRIPTION
     Finally, Spiffy exports a few debugging functions "WWW", "XXX", "YYY"
     and "ZZZ". Each of them produces a YAML dump of its arguments. WWW warns
     the output, XXX dies with the output, YYY prints the output, and ZZZ
-    confesses the output.
+    confesses the output. If YAML doesn't suit your needs, you can switch
+    all the dumps to Data::Dumper format with the "-dumper" option.
 
     That's Spiffy!
 
 Spiffy EXPORTING
     Spiffy implements a completely new idea in Perl. Modules that act both
-    as object oriented classes, and that also export functions. But it takes
+    as object oriented classes and that also export functions. But it takes
     the concept of Exporter.pm one step further; it walks the entire @ISA
     path of a class and honors the export specifications of each module.
     Since Spiffy calls on the Exporter module to do this, you can use all
@@ -122,9 +123,11 @@ Spiffy EXPORTING
         use Spiffy '-base';
         our $SERIAL_NUMBER = 0;
         our @EXPORT = qw($SERIAL_NUMBER);
+        our @EXPORT_BASE = qw(tire horn);
 
         package Bicycle;
         use Vehicle '-base', '!field';
+        $self->inflate(tire);
 
     In this case, "Bicycle-"isa('Vehicle')> and also all the things that
     "Vehicle" and "Spiffy" export, will go into "Bicycle", except "field".
@@ -133,6 +136,11 @@ Spiffy EXPORTING
     hundreds of classes, and you want them all to have access to some
     functions or constants or variables. Just export them in your main base
     class and every subclass will get the functions they need.
+
+    You can do almost everything that Exporter does because Spiffy delegates
+    the job to Exporter (after adding some Spiffy magic). Spiffy offers a
+    @EXPORT_BASE variable which is like @EXPORT, but only for usages that
+    use "-base".
 
 Spiffy FILTERING
     By using the "-Base" flag instead of "-base" you never need to write the
@@ -196,8 +204,14 @@ Spiffy DEBUGGING
     have the code run as before. Use ZZZ when you need to die with both a
     YAML dump and a full stack trace.
 
-    The debugging functions are not exported by default. To export all 4
-    functions use the export tag ":XXX".
+    The debugging functions are exported by default if you use the "-base"
+    option. To export all 4 functions use the export tag:
+
+        use SomeSpiffyModule ':XXX';
+
+    To force the debugging functions to use Data::Dumper instead of YAML:
+
+        use SomeSpiffyModule '-dumper';
 
 Spiffy FUNCTIONS
     This section describes the functions the Spiffy exports. The "field",
@@ -305,7 +319,7 @@ Spiffy METHODS
                 -is_yummy => 0,
             }
 
-        and $others will contain 'red', 'white', and 'black'.
+        and @others will contain 'red', 'white', and 'black'.
 
     * boolean_arguments
         Returns the list of arguments that are recognized as being boolean.
@@ -350,7 +364,7 @@ USING Spiffy WITH base.pm
     module.
 
   base.pm Caveats
-    To make Spiffy work with base.pm a dirty trick was played. Spiffy swaps
+    To make Spiffy work with base.pm, a dirty trick was played. Spiffy swaps
     "base::import" with its own version. If the base modules are not Spiffy,
     Spiffy calls the original base::import. If the base modules are Spiffy,
     then Spiffy does its own thing.

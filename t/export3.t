@@ -23,5 +23,5 @@ ok(defined $main::A2);
 ok(defined $main::A3);
 ok(not defined $main::A4);
 is($A1, 5);
-is($A2, 15);
+is($A2, 10);
 is($A3, 20);

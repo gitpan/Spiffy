@@ -25,6 +25,7 @@ t/field.t
 t/field2.t
 t/filter.t
 t/filter2.t
+t/filter3.t
 t/new.t
 t/package.t
 t/parse.t

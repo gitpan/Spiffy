@@ -1,4 +1,4 @@
-use lib 't';
+use lib 't', 'lib';
 use strict;
 use warnings;
 
@@ -9,8 +9,10 @@ const dude => 10;
 
 package B;
 use base 'A';
-BEGIN {@B::EXPORT_OK = qw(dude)}
-const dude => 20;
+BEGIN {
+    @B::EXPORT_OK = qw(dude);
+    const dude => 20;
+}
 
 package C;
 BEGIN {B->import('dude')}

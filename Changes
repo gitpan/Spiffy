@@ -1,4 +1,11 @@
 ---
+version: 0.18
+date:    Wed Jun  2 15:05:05 PDT 2004
+changes:
+- Allow 'use base' to work with Spiffy and non-Spiffy
+- Allow DATA filehandle to work with source filtering
+- Support @EXPORT_BASE
+---
 version: 0.17
 date:    Tue May 11 17:09:00 PDT 2004
 changes:

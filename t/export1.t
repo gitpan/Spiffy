@@ -18,7 +18,7 @@ ok(not defined &Foo::spiffy_constructor);
 ok(not defined &Something::import);
 ok(defined &Something::thing);
 ok(defined &Something::field);
-ok(defined &Something::spiffy_constructor);
+ok(not defined &Something::spiffy_constructor);
 is(join('-', @Something::ISA), 'Thing');
 
 ok(not defined &Thing::import);

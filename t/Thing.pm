@@ -1,6 +1,6 @@
 package Thing;
 use strict;
-use Spiffy ();
+use Spiffy qw(spiffy_constructor);
 use base 'Spiffy';
 our @EXPORT = qw(thing);
 

@@ -1,4 +1,13 @@
 ---
+version: 0.19
+date:    Sun Jul 11 01:41:38 PDT 2004
+changes:
+- mixin support
+- don't export spiffy_constructor by default
+- Don't export XXX stuff until -XXX used
+- add support for roles and import lists with mixins
+- super works with AUTOLOAD
+---
 version: 0.18
 date:    Wed Jun  2 15:05:05 PDT 2004
 changes:

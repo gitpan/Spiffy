@@ -4,12 +4,10 @@ use 5.006_001;
 use warnings;
 use Carp;
 require Exporter;
-our $VERSION = '0.18';
+our $VERSION = '0.19';
 our @EXPORT = ();
-our @EXPORT_OK = qw(id WWW XXX YYY ZZZ);
-our @EXPORT_BASE = qw(
-    field const stub super WWW XXX YYY ZZZ
-);
+our @EXPORT_BASE = qw(field const stub super);
+our @EXPORT_OK = (@EXPORT_BASE, qw(spiffy_constructor id WWW XXX YYY ZZZ));
 our %EXPORT_TAGS = (XXX => [qw(WWW XXX YYY ZZZ)]);
 
 my $class_map = {};
@@ -37,32 +35,38 @@ my $filtered_files = {};
 sub import {
     no strict 'refs'; 
     no warnings;
-    local(*spiffy_constructor);
     my $self_package = shift;
 
     my ($args, @export_list) = do {
         local *boolean_arguments = sub { 
-            qw(-base -Base -selfless -dumper -yaml) 
+            qw(-base -Base -mixin -selfless -XXX -dumper -yaml) 
         };
         local *paired_arguments = sub { qw(-package) };
         $self_package->parse_arguments(@_);
     };
+    return spiffy_mixin_import(scalar(caller(0)), $self_package, @export_list)
+      if $args->{-mixin};
 
     $dump = 'yaml' if $args->{-yaml};
     $dump = 'dumper' if $args->{-dumper};
+    if ($args->{-XXX}) {
+        push @EXPORT_BASE, @{$EXPORT_TAGS{XXX}}
+          unless grep /^XXX$/, @EXPORT_BASE;
+    }
 
     spiffy_filter() if $args->{-selfless} and 
       not $filtered_files->{(caller($stack_frame))[1]}++;
 
     my $caller_package = $args->{-package} || caller($stack_frame);
     if ($args->{-Base} or $args->{-base}) {
-        push @{"${caller_package}::ISA"}, $self_package;
+        push @{"$caller_package\::ISA"}, $self_package;
         spiffy_filter() if $args->{-Base} and 
           not $filtered_files->{(caller($stack_frame))[1]}++;
-        *{"${caller_package}::spiffy_constructor"} =
-          $self_package->spiffy_constructor_maker($caller_package)
-            unless defined &{"${caller_package}::spiffy_constructor"};
     }
+
+    local *spiffy_constructor =
+      $self_package->spiffy_constructor_maker($caller_package)
+        unless defined &{"$caller_package\::spiffy_constructor"};
 
     for my $class (all_my_bases($self_package)) {
         next unless $class->isa('Spiffy');
@@ -265,7 +269,8 @@ sub super_args { my @dummy = caller(2); @DB::args }
 package Spiffy;
 
 sub super {
-    @_ = DB::super_args unless @_;
+    my @args = DB::super_args;
+    @_ = @_ ? ($args[0], @_) : @args;
     my $class = ref $_[0] ? ref $_[0] : $_[0];
     (my $method = (caller(1))[3]) =~ s/.*:://;
     my $caller_class = caller;
@@ -276,8 +281,11 @@ sub super {
     for my $super_class (@super_classes) {
         no strict 'refs';
         next if $super_class eq $class;
-        goto &{"${super_class}::$method"}
-          if defined &{"${super_class}::$method"};
+        if (defined &{"${super_class}::$method"}) {
+            ${"$super_class\::AUTOLOAD"} = ${"$class\::AUTOLOAD"}
+              if $method eq 'AUTOLOAD';
+            goto &{"${super_class}::$method"};
+        }
     }
     return;
 }
@@ -288,20 +296,25 @@ sub super {
 # can use base.pm with Spiffy modules, without being the wiser.
 #===============================================================================
 my $real_base_import;
+my $real_mixin_import;
 
 BEGIN {
     require base unless defined $INC{'base.pm'};
+    $INC{'mixin.pm'} ||= 'Spiffy/mixin.pm';
     $real_base_import = \&base::import;
+    $real_mixin_import = \&mixin::import;
     no warnings;
     *base::import = \&spiffy_base_import;
+    *mixin::import = \&spiffy_mixin_import;
 }
 
 my $i = 0;
 while (my $caller = caller($i++)) {
-    next unless $caller eq 'base';
-    croak 
-    "Spiffy.pm must be loaded before calling 'use base' with a Spiffy module\n",
-    "See the documentation of Spiffy.pm for details\n  ";
+    next unless $caller eq 'base' or $caller eq 'mixin';
+    croak <<END;
+Spiffy.pm must be loaded before calling 'use base' or 'use mixin' with a
+Spiffy module. See the documentation of Spiffy.pm for details.
+END
 }
 
 sub spiffy_base_import {
@@ -324,8 +337,86 @@ sub spiffy_base_import {
         $stack_frame = 0;
     }
 }
-# END of naughty code.
 
+sub spiffy_mixin_import {
+    my $target_class = shift;
+    $target_class = caller(0)
+      if $target_class eq 'mixin';
+    my $mixin_class = shift;
+    eval "require $mixin_class";
+    my @roles = @_;
+    my $pseudo_class = join '-', $target_class, $mixin_class, @roles;
+    my %methods = spiffy_mixin_methods($mixin_class, @roles);
+    no strict 'refs';
+    no warnings;
+    @{"$pseudo_class\::ISA"} = @{"$target_class\::ISA"};
+    @{"$target_class\::ISA"} = ($pseudo_class);
+    for (keys %methods) {
+        *{"$pseudo_class\::$_"} = $methods{$_};
+    }
+}
+
+sub spiffy_mixin_methods {
+    my $mixin_class = shift;
+    no strict 'refs';
+    my %methods = spiffy_all_methods($mixin_class);
+    map {
+        $methods{$_}
+          ? ($_, \ &{"$methods{$_}\::$_"})
+          : ($_, \ &{"$mixin_class\::$_"})
+    } @_ 
+      ? (get_roles($mixin_class, @_))
+      : (keys %methods);
+}
+
+sub get_roles {
+    my $mixin_class = shift;
+    my @roles = @_;
+    while (grep /^!*:/, @roles) {
+        @roles = map {
+            s/!!//g;
+            /^!:(.*)/ ? do { 
+                my $m = "_role_$1"; 
+                map("!$_", $mixin_class->$m);
+            } :
+            /^:(.*)/ ? do {
+                my $m = "_role_$1"; 
+                ($mixin_class->$m);
+            } :
+            ($_)
+        } @roles;
+    }
+    if (@roles and $roles[0] =~ /^!/) {
+        my %methods = spiffy_all_methods($mixin_class);
+        unshift @roles, keys(%methods);
+    }
+    my %roles;
+    for (@roles) {
+        s/!!//g;
+        delete $roles{$1}, next
+          if /^!(.*)/;
+        $roles{$_} = 1;
+    }
+    keys %roles;
+}
+
+sub spiffy_all_methods {
+    no strict 'refs';
+    my $class = shift;
+    return if $class eq 'Spiffy';
+    my %methods = map {
+        ($_, $class)
+    } grep {
+        defined &{"$class\::$_"} and not /^_/
+    } keys %{"$class\::"};
+    my %super_methods;
+    %super_methods = spiffy_all_methods(${"$class\::ISA"}[0])
+      if @{"$class\::ISA"};
+    %{{%super_methods, %methods}};
+}
+
+
+# END of naughty code.
 #===============================================================================
 # Debugging support
 #===============================================================================
@@ -391,14 +482,23 @@ Spiffy - Spiffy Perl Interface Framework For You
 
 =head1 DESCRIPTION
 
-"Spiffy" is a framework and methodology for doing object oriented
+"Spiffy" is a framework and methodology for doing object oriented (OO)
 programming in Perl. Spiffy combines the best parts of Exporter.pm,
 base.pm, mixin.pm and SUPER.pm into one magic foundation class. It
-attempts to fix all the nits and warts of traditional Perl OO, in
-a clean, straightforward and (perhaps someday) standard way.
+attempts to fix all the nits and warts of traditional Perl OO, in a
+clean, straightforward and (perhaps someday) standard way.
 
 Spiffy borrows ideas from other OO languages like Python, Ruby,
 Java and Perl 6. It also adds a few tricks of its own. 
+
+If you take a look on CPAN, there are a ton of OO related modules. When
+starting a new project, you need to pick the set of modules that makes
+most sense, and then you need to use those modules in each of your
+classes. Spiffy, on the other hand, has everything you'll probably need
+in one module, and you only need to use it once in one of your classes.
+If you make Spiffy.pm the base class of the basest class in your
+project, Spiffy will automatically pass all of its magic to all of your
+subclasses. You may eventually forget that you're even using it!
 
 The most striking difference between Spiffy and other Perl object
 oriented base classes, is that it has the ability to export functions.
@@ -406,7 +506,8 @@ If you create a subclass of Spiffy, all the functions that Spiffy
 exports will automatically be exported by your subclass, in addition to
 any more functions that you want to export. And if someone creates a
 subclass of your subclass, all of those functions will be exported
-automatically, and so on.
+automatically, and so on. Think of it as "Inherited Exportation", and it
+uses the familiar Exporter.pm specification syntax.
 
 To use Spiffy or any subclass of Spiffy as a base class of your class,
 you specify the C<-base> argument to the C<use> command. 
@@ -418,6 +519,17 @@ syntax and everything will work exactly the same. The only caveat is
 that Spiffy.pm must already be loaded. That's because Spiffy rewires
 base.pm on the fly to do all the Spiffy magics.
 
+Spiffy has support for Ruby-like mixins with Perl6-like roles. Just like
+C<base> you can use either of the following invocations:
+
+    use MySpiffyBaseModule '-mixin';
+    use mixin 'MySpiffyBaseModule';
+
+To limit the methods that get mixed in, use roles. (Hint: they work just like
+an Exporter list):
+
+    use MySpiffyBaseModule -mixin => qw(:basics x y !foo);
+
 In object oriented Perl almost every subroutine is a method. Each method
 gets the object passed to it as its first argument. That means
 practically every subroutine starts with the line:
@@ -427,9 +539,10 @@ practically every subroutine starts with the line:
 Spiffy provides a simple, optional filter mechanism to insert that line
 for you, resulting in cleaner code. If you figure an average method has
 10 lines of code, that's 10% of your code! To turn this option on, you
-just use the C<-Base> option instead of the C<-base> option. If source
-filtering makes you queazy, don't use the feature. I personally find it
-addictive in my quest for writing squeaky clean, maintainable code.
+just use the C<-Base> option instead of the C<-base> option, or add the
+C<-selfless> option. If source filtering makes you queazy, don't use the
+feature. I personally find it addictive in my quest for writing squeaky
+clean, maintainable code.
 
 A useful feature of Spiffy is that it exports two functions: C<field>
 and C<const> that can be used to declare the attributes of your class,
@@ -457,7 +570,7 @@ function with Spiffy:
         super;
     }
 
-Spiffy has an interesting function that it exports called
+Spiffy has an interesting function that it can export called
 C<spiffy_constructor>. This function will generate a shortcut function
 that will call the class's "new" constructor. It is smart enough to know
 which class to use. All the arguments you pass to the generated
@@ -474,11 +587,11 @@ C<paired_arguments>. Parse arguments pulls out the booleans and pairs
 and returns them in an anonymous hash, followed by a list of the
 unmatched arguments.
 
-Finally, Spiffy exports a few debugging functions C<WWW>, C<XXX>, C<YYY>
-and C<ZZZ>. Each of them produces a YAML dump of its arguments. WWW
-warns the output, XXX dies with the output, YYY prints the output, and
-ZZZ confesses the output. If YAML doesn't suit your needs, you can switch all
-the dumps to Data::Dumper format with the C<-dumper> option.
+Finally, Spiffy can export a few debugging functions C<WWW>, C<XXX>,
+C<YYY> and C<ZZZ>. Each of them produces a YAML dump of its arguments.
+WWW warns the output, XXX dies with the output, YYY prints the output,
+and ZZZ confesses the output. If YAML doesn't suit your needs, you can
+switch all the dumps to Data::Dumper format with the C<-dumper> option.
 
 That's Spiffy!
 
@@ -518,6 +631,58 @@ You can do almost everything that Exporter does because Spiffy delegates
 the job to Exporter (after adding some Spiffy magic). Spiffy offers a
 C<@EXPORT_BASE> variable which is like C<@EXPORT>, but only for usages
 that use C<-base>.
+
+=head1 Spiffy MIXINs & ROLEs
+
+If you've done much OO programming in Perl you've probably used Multiple
+Inheritance (MI), and if you've done much MI you've probably run into
+weird problems and headaches. Some languages like Ruby, attempt to
+resolve MI issues using a technique called mixins. Basically, all Ruby
+classes use only Single Inheritance (SI), and then I<mixin>
+functionality from other modules if they need to.
+
+Mixins can be thought of at a simplistic level as I<importing> the
+methods of another class into your subclass. But from an implementation
+standpoint that's not the best way to do it. Spiffy does what Ruby
+does. It creates an empty anonymous class, imports everything into that
+class, and then chains the new class into your SI ISA path. In other
+words, if you say:
+
+    package A;
+    use B '-base';
+    use C '-mixin';
+    use D '-mixin';
+
+You end up with a single inheritance chain of classes like this:
+
+    A << A-D << A-C << B;
+
+C<A-D> and C<A-C> are the actual package names of the generated
+classes. The nice thing about this style is that mixing in C doesn't
+clobber any methods in A, and D doesn't conflict with A or C either. If
+you mixed in a method in C that was also in A, you can still get to it
+by using C<super>.
+
+When Spiffy mixes in C, it pulls in all the methods in C that do not
+begin with an underscore. Actually it goes farther than that. If C is a
+subclass it will pull in every method that C C<can> do through
+inheritance. This is very powerful, maybe too powerful.
+
+To limit what you mixin, Spiffy borrows the concept of Roles from
+Perl6. The term role is used more loosely in Spiffy though. It's much
+like an import list that the Exporter module uses, and you can use
+groups (tags) and negation. If the first element of your list uses
+negation, Spiffy will start with all the methods that your mixin
+class can do.
+
+    use E -mixin => qw(:tools walk !run !:sharp_tools);
+
+In this example, C<walk> and C<run> are methods that E can do, and
+C<tools> and C<sharp_tools> are roles of class E. How does class E
+define these roles? It very simply defines methods called C<_role_tools>
+and C<_role_sharp_tools> which return lists of more methods. (And
+possibly other roles!) The neat thing here is that since roles are just
+methods, they too can be inherited. Take B<that> Perl6!
 
 =head1 Spiffy FILTERING
 
@@ -584,7 +749,8 @@ code run as before. Use ZZZ when you need to die with both a YAML dump and a
 full stack trace.
 
 The debugging functions are exported by default if you use the C<-base>
-option. To export all 4 functions use the export tag:
+option, but only if you have previously used the C<-XXX> option. To
+export all 4 functions use the export tag:
 
     use SomeSpiffyModule ':XXX';
 
@@ -592,11 +758,25 @@ To force the debugging functions to use Data::Dumper instead of YAML:
 
     use SomeSpiffyModule '-dumper';
 
+=head1 Spiffy CONSTRUCTOR
+
+Every foundation class has a constructor method to inherit, and Spiffy
+is no exception. Spiffy has a class method called C<new> that creates a
+new object. It accepts keyword/value pairs as arguments. Each keyword is
+considered to be a method, and will be called on the new object using
+the associated value.
+
+    my $sss = SomeSpiffySubclass->new(size => 42);
+
+If you call the constructor like this, you must ensure that 
+C<< SomeSpiffySubclass->can('size') >>.
+
 =head1 Spiffy FUNCTIONS
 
 This section describes the functions the Spiffy exports. The C<field>,
-C<const>, C<super> and C<spiffy_constructor> functions are only exported when
-you use the C<-base> or C<-Base> options.
+C<const>, C<stub> and C<super> functions are only exported when you use
+the C<-base> or C<-Base> options. The C<spiffy_constructor> is exported
+if you request it.
 
 =over 4
 
@@ -627,24 +807,27 @@ in the object.
 The C<const> function is similar to <field> except that it is immutable.
 It also does not store data in the object. You probably always want to
 give a C<const> a default value, otherwise the generated method will be
-somewaht useless.
+somewhat useless.
 
 =item * stub
 
     stub 'cigar';
 
-The C<stub> function generates a method that will die with an appropriate
-message. The idea is that subclasses must implement these methods so that the
-stub methods don't get called.
+The C<stub> function generates a method that will die with an
+appropriate message. The idea is that subclasses must implement these
+methods so that the stub methods don't get called.
 
 =item * super
 
-This function is called without any arguments. It will call the same
-method that it is in, higher up in the ISA tree, passing it all the same
-arguments.
+If this function is called without any arguments, it will call the same
+method that it is in, higher up in the ISA tree, passing it all the
+same arguments. If it is called with arguments, it will use those
+arguments with C<$self> in the front. In other words, it just works
+like you'd expect.
 
     sub foo {
         super;             # Same as $self->SUPER::foo(@_);
+        super('hello');    # Same as $self->SUPER::foo('hello');
         $self->bar(42);
     }
 
@@ -654,7 +837,8 @@ arguments.
         return $self;
     }
 
-C<super> will simply do nothing if there is no super method.
+C<super> will simply do nothing if there is no super method. Finally,
+C<super> does the right thing in AUTOLOAD subroutines.
 
 =item * spiffy_constructor
 
@@ -668,14 +852,11 @@ passed to the C<use> statement of your class.
     
     spiffy_constructor 'foo';
 
-The C<spiffy_constructor> function is only exported if you use the 
-'-base' option.
-
 =back
 
 =head1 Spiffy METHODS
 
-This section list all of the methods that any subclass of Spiffy
+This section lists all of the methods that any subclass of Spiffy
 automatically inherits.
 
 =over 4
@@ -799,12 +980,6 @@ base> statements.
 Spiffy is a wonderful way to do OO programming in Perl, but it is still
 a work in progress. New things will be added, and things that don't work
 well, might be removed.
-
-One thing I really want to add is B<mixins>. Mixins are good medicine for
-multiple inheritance headaches. The syntax will use C<-mixin> instead of
-C<-base>. But I still need to think on exactly how this should work, before
-implementing it. If you are an OO guru and have good ideas about how this
-should work, please send me an email.
 
 =head1 AUTHOR
 

@@ -4,7 +4,7 @@ use warnings;
 
 package XXX;
 use Spiffy '-base';
-field const foo => 42;
+const foo => 42;
 
 package main;
 use Test::More tests => 3;

@@ -4,7 +4,7 @@ use Spiffy ();
 use base 'Spiffy';
 our @EXPORT = qw(thing);
 
-attribute volume => 11;
+field volume => 11;
 
 spiffy_constructor('thing');
 

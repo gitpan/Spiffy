@@ -2,7 +2,7 @@ package Something;
 use strict;
 use Thing '-base';
 
-attribute color => 'blue';
+field color => 'blue';
 
 sub cool {}
 

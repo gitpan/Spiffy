@@ -3,8 +3,8 @@ use lib 'lib';
 package Foo;
 use strict;
 use Spiffy '-base';
-attribute 'xxx';
-attribute 'dog';
+field 'xxx';
+field 'dog';
 
 sub new {
     my $self = super;

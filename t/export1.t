@@ -12,17 +12,17 @@ ok(thing()->isa('Something'));
 ok(thing()->isa('Thing'));
 ok(thing()->isa('Spiffy'));
 is(join('-', @Foo::ISA), '');
-ok(not defined &Foo::attribute);
+ok(not defined &Foo::field);
 ok(not defined &Foo::spiffy_constructor);
 
-ok(defined &Something::import);
+ok(not defined &Something::import);
 ok(defined &Something::thing);
-ok(defined &Something::attribute);
+ok(defined &Something::field);
 ok(defined &Something::spiffy_constructor);
 is(join('-', @Something::ISA), 'Thing');
 
-ok(defined &Thing::import);
+ok(not defined &Thing::import);
 ok(defined &Thing::thing);
-ok(defined &Thing::attribute);
+ok(defined &Thing::field);
 ok(defined &Thing::spiffy_constructor);
 is(join('-', @Thing::ISA), 'Spiffy');

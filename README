@@ -2,99 +2,259 @@ NAME
     Spiffy - Spiffy Perl Interface Framework For You
 
 SYNOPSIS
-        use Spiffy '-base';
-   
-DESCRIPTION
-    "Spiffy" is a Perl module interface methodology and framework. It is a
-    base class for implementing other Perl modules using my favorite tricks.
+        package Keen;
+        use Spiffy '-Base';
+        field 'mirth';
+        const mood => ':-)';
+    
+        sub happy {
+            if ($self->mood eq ':-(') {
+                $self->mirth(-1);
+                print "Cheer up!";
+            }
+            super;
+        }
 
-    Spiffy is different from other Perl object oriented base classes, in
-    that it has the ability to export functions. If you create a subclass of
-    Spiffy, all the functions that Spiffy exports will automatically be
-    exported by your subclass, in addition to any more functions that you
-    want to export. And if someone creates a subclass of your subclass, all
-    of those functions will be exported automatically, and so on.
+DESCRIPTION
+    "Spiffy" is a framework and methodology for doing object oriented
+    programming in Perl. Spiffy combines the best parts of Exporter.pm,
+    base.pm, mixin.pm and SUPER.pm into one magic foundation class. It
+    attempts to fix all the nits and warts of traditional Perl OO, in a
+    clean, straightforward and (perhaps someday) standard way.
+
+    Spiffy borrows ideas from other OO languages like Python, Ruby, Java and
+    Perl 6. It also adds a few tricks of its own.
+
+    The most striking difference between Spiffy and other Perl object
+    oriented base classes, is that it has the ability to export functions.
+    If you create a subclass of Spiffy, all the functions that Spiffy
+    exports will automatically be exported by your subclass, in addition to
+    any more functions that you want to export. And if someone creates a
+    subclass of your subclass, all of those functions will be exported
+    automatically, and so on.
+
+    To use Spiffy or any subclass of Spiffy as a base class of your class,
+    you specify the "-base" argument to the "use" command.
+
+        use MySpiffyBaseModule '-base';
+
+    You can also use the traditional "use base 'MySpiffyBaseModule';" syntax
+    and everything will work exactly the same. The only caveat is that
+    Spiffy.pm must already be loaded. That's because Spiffy rewires base.pm
+    on the fly to do all the Spiffy magics.
+
+    In object oriented Perl almost every subroutine is a method. Each method
+    gets the object passed to it as its first argument. That means
+    practically every subroutine starts with the line:
+
+         my $self = shift;
+
+    Spiffy provides a simple, optional filter mechanism to insert that line
+    for you, resulting in cleaner code. If you figure an average method has
+    10 lines of code, that's 10% of your code! To turn this option on, you
+    just use the "-Base" option instead of the "-base" option. If source
+    filtering makes you queazy, don't use the feature. I personally find it
+    addictive in my quest for writing squeaky clean, maintainable code.
+
+    A useful feature of Spiffy is that it exports two functions: "field" and
+    "const" that can be used to declare the attributes of your class, and
+    automatically generate accessor methods for them. The only difference
+    between the two functions is that "const" attributes can not be
+    modified; thus the accessor is much faster.
+
+    One interesting aspect of OO programming is when a method calls the same
+    method from a parent class. This is generally known as calling a super
+    method. Perl's facility for doing this is butt ugly:
+
+        sub cleanup {
+            my $self = shift;
+            $self->scrub;
+            $self->SUPER::cleanup(@_);
+        }
+
+    Spiffy makes it, er, super easy to call super methods. You just use the
+    "super" function. You don't need to pass it any arguments because it
+    automatically passes them on for you. Here's the same function with
+    Spiffy:
+
+        sub cleanup {
+            $self->scrub;
+            super;
+        }
 
     Spiffy has an interesting function that it exports called
-    "spiffy_constructor()". This function will generate a function that will
-    call the class's "new()" constructor. It is smart enough to know which
-    class to use. All the arguments you pass to the generated function, get
-    passed on to the constructor. In addition, all the arguments you passed
-    in the use statement for that class, also get passed to the constructor.
-    The "io()" function of IO::All is an example.
+    "spiffy_constructor". This function will generate a shortcut function
+    that will call the class's "new" constructor. It is smart enough to know
+    which class to use. All the arguments you pass to the generated
+    function, get passed on to each invocation of the constructor. In
+    addition, all the arguments you passed in the use statement for that
+    class, also get passed to the constructor. The "io()" function of
+    IO::All is a good example of using "spiffy_constructor".
 
-    Spiffy has an interesting way of parsing arguments that you pass to
-    "spiffy_constructor" generated functions, and also to "use" statements.
-    You declare which arguments are boolean (singletons) and which ones are
-    paired, with two special functions called "boolean_arguments" and
-    "paired_arguments".
+    Spiffy has a special method for parsing arguments called
+    "parse_arguments", that it also uses for parsing its own arguments. You
+    declare which arguments are boolean (singletons) and which ones are
+    paired, with two special methods called "boolean_arguments" and
+    "paired_arguments". Parse arguments pulls out the booleans and pairs and
+    returns them in an anonymous hash, followed by a list of the unmatched
+    arguments.
 
-    Spiffy also exports a function called "field" that you can use to
-    declare the fields of your class. The "field" function will generate
-    accessors for you. These fields can be given defaults values as well.
-
-    Perhaps this is all best described through an example. (These are meant
-    to be three separate files):
-
-        use Something qw(-cool);
-        foo;
-        bar;
-        my $thing = thing(-name => 'Jimmy');
-        $thing->size(11);
-    
-        package Something;
-        use Thing '-base';
-        field size => 0;
-        @EXPORT = qw(foo);
-        sub foo { ... }
-        sub paired_arguments {
-            my $self = shift;
-            ('-name', $self->SUPER::paired_arguments)
-        }
-        1;
-   
-        package Thing;
-        use Spiffy '-base';
-        @EXPORT = qw(bar thing);
-        sub bar { ... }
-        spiffy_constructor 'thing';
-        sub boolean_arguments {
-            my $self = shift;
-            ('-cool', $self->SUPER::boolean_arguments)
-        }
-        1;
-
-    The top level program uses a module called "Something". "Something"
-    exports 3 functions: "foo", "bar" and "thing". The "thing" function
-    returns a new "Something" object. The "new()" method for the "Something"
-    class is called with the arguments "<-name =" 'Jimmy'>>, and also with
-    the arguments "<-cool =" 1>>.
-
-    "Something" is a subclass of "Thing" and "Thing" is a subclass of
-    "Spiffy". This is accomplished by importing the base classes with the
-    special parameter "-base". This is similar to using the "base.pm" module
-    except that it does all the extra Spiffy magic.
+    Finally, Spiffy exports a few debugging functions "WWW", "XXX", "YYY"
+    and "ZZZ". Each of them produces a YAML dump of its arguments. WWW warns
+    the output, XXX dies with the output, YYY prints the output, and ZZZ
+    confesses the output.
 
     That's Spiffy!
 
+Spiffy EXPORTING
+    Spiffy implements a completely new idea in Perl. Modules that act both
+    as object oriented classes, and that also export functions. But it takes
+    the concept of Exporter.pm one step further; it walks the entire @ISA
+    path of a class and honors the export specifications of each module.
+    Since Spiffy calls on the Exporter module to do this, you can use all
+    the fancy interface features that Exporter has, including tags and
+    negation.
+
+    Spiffy considers all the arguments that don't begin with a dash to
+    comprise the export specification.
+
+        package Vehicle;
+        use Spiffy '-base';
+        our $SERIAL_NUMBER = 0;
+        our @EXPORT = qw($SERIAL_NUMBER);
+
+        package Bicycle;
+        use Vehicle '-base', '!field';
+
+    In this case, "Bicycle-"isa('Vehicle')> and also all the things that
+    "Vehicle" and "Spiffy" export, will go into "Bicycle", except "field".
+
+    Exporting can be very helpful when you've designed a system with
+    hundreds of classes, and you want them all to have access to some
+    functions or constants or variables. Just export them in your main base
+    class and every subclass will get the functions they need.
+
+Spiffy FILTERING
+    By using the "-Base" flag instead of "-base" you never need to write the
+    line:
+
+        my $self = shift;
+
+    This statement is added to every subroutine in your class by using a
+    source filter. The magic is simple and fast, so there is litte
+    performance penalty for creating clean code on par with Ruby and Python.
+
+        package Example;
+        use Spiffy '-Base';
+
+        sub crazy {
+            $self->nuts;
+        }
+        sub wacky { }
+        sub new() {
+            bless [], shift;
+        }
+
+    is exactly the same as:
+
+        package Example;
+        use Spiffy '-base';
+
+        sub crazy {my $self = shift;
+            $self->nuts;
+        }
+        sub wacky {my $self = shift; }
+        sub new {
+            bless [], shift;
+        }
+
+    Note that the empty parens after the subroutine "new" keep it from
+    having a $self added. Also not that the extra code is added to existing
+    lines to ensure that line numbers are not altered.
+
+Spiffy DEBUGGING
+    The XXX function is very handy for debugging because you can insert it
+    almost anywhere, and it will dump your data in nice clean YAML. Take the
+    following statement:
+
+        my @stuff = grep { /keen/ } $self->find($a, $b);
+
+    If you have a problem with this statement, you can debug it in any of
+    the following ways:
+
+        XXX my @stuff = grep { /keen/ } $self->find($a, $b);
+        my @stuff = XXX grep { /keen/ } $self->find($a, $b);
+        my @stuff = grep { /keen/ } XXX $self->find($a, $b);
+        my @stuff = grep { /keen/ } $self->find(XXX $a, $b);
+
+    XXX is easy to insert and remove. It is also a tradition to mark
+    uncertain areas of code with XXX. This will make the debugging dumpers
+    easy to spot if you forget to take them out.
+
+    WWW and YYY are nice because they dump their arguments and then return
+    the arguments. This way you can insert them into many places and still
+    have the code run as before. Use ZZZ when you need to die with both a
+    YAML dump and a full stack trace.
+
+    The debugging functions are not exported by default. To export all 4
+    functions use the export tag ":XXX".
+
 Spiffy FUNCTIONS
-    Spiffy defines a few functions that make it Spiffy.
+    This section describes the functions the Spiffy exports. The "field",
+    "const", "super" and "spiffy_constructor" functions are only exported
+    when you use the "-base" or "-Base" options.
 
     * field
         Defines accessor methods for a field of your class:
 
             package Example;
-            use Spiffy '-base';
+            use Spiffy '-Base';
     
             field 'foo';
-            field const bar => 42;
+            field bar => [];
 
-        The "const" is not a parameter but another function. It tells
-        "field" to generate an immutable accessor. The first parameter is
-        the name of the field. The second optional argument is the default
-        value.
+            sub lalala {
+                $self->foo(42);
+                push @{$self->{bar}}, $self->foo;
+            }
 
-        The "field" function is only exported if you use the '-base' option.
+        The first parameter passed to "field" is the name of the attribute
+        being defined. Accessors can be given an optional default value.
+        This value will be returned if no value for the field has been set
+        in the object.
+
+    * const
+            const bar => 42;
+
+        The "const" function is similar to <field> except that it is
+        immutable. It also does not store data in the object. You probably
+        always want to give a "const" a default value, otherwise the
+        generated method will be somewaht useless.
+
+    * stub
+            stub 'cigar';
+
+        The "stub" function generates a method that will die with an
+        appropriate message. The idea is that subclasses must implement
+        these methods so that the stub methods don't get called.
+
+    * super
+        This function is called without any arguments. It will call the same
+        method that it is in, higher up in the ISA tree, passing it all the
+        same arguments.
+
+            sub foo {
+                super;             # Same as $self->SUPER::foo(@_);
+                $self->bar(42);
+            }
+
+            sub new() {
+                my $self = super;
+                $self->init;
+                return $self;
+            }
+
+        "super" will simply do nothing if there is no super method.
 
     * spiffy_constructor
         This function generates a function that calls the "new()" method for
@@ -103,7 +263,7 @@ Spiffy FUNCTIONS
 
             package Example;
             use Spiffy '-base';
-            @EXPORT = qw(foo);
+            our @EXPORT = qw(foo);
     
             spiffy_constructor 'foo';
 
@@ -111,10 +271,8 @@ Spiffy FUNCTIONS
         '-base' option.
 
 Spiffy METHODS
-    The following subroutines are all methods rather than functions and
-    should be called as such. For example:
-
-        $self->parse_arguments(@arguments);
+    This section list all of the methods that any subclass of Spiffy
+    automatically inherits.
 
     * is_spiffy
         Returns true if an object is Spiffy. This method is UNIVERSAL so it
@@ -157,34 +315,6 @@ Spiffy METHODS
         Returns the list of arguments that are recognized as being paired.
         Override this method to define your own list.
 
-    * super
-        This function is called without any arguments. It will call the same
-        method that it is in, one level higher in the ISA tree, passing it
-        all the same arguments.
-
-            sub foo {
-                my self = shift;
-                super;             # Same as $self->SUPER::foo(@_);
-                $self->bar(42);
-            }
-
-    * base
-        This function will call Spiffy::import at runtime, basically making
-        the calling package a subclass of whatever object or class base()
-        was called on.
-
-            package XXX;
-            BEGIN { require YYY; YYY->base }
-
-        is the same as:
-
-            package XXX;
-            use YYY '-base';
-
-    * XXX
-        The "XXX" method will die with a YAML Dump of all the arguments
-        passed to it. Used for debugging.
-
 Spiffy ARGUMENTS
     When you "use" the Spiffy module or a subclass of it, you can pass it a
     list of arguments. These arguments are parsed using the
@@ -198,7 +328,7 @@ Spiffy ARGUMENTS
 
 USING Spiffy WITH base.pm
     The proper way to use a Spiffy module as a base class is with the
-    <-base> parameter to the "use" statement. This differs from typical
+    "-base" parameter to the "use" statement. This differs from typical
     modules where you would want to "use base".
 
         package Something;
@@ -213,9 +343,15 @@ USING Spiffy WITH base.pm
         use base 'Spiffy::Module';
         use base 'NonSpiffy::Module';
 
+    "use base" is also very useful when your class is not an actual module
+    (a separate file) but just a package in some file that has already been
+    loaded. "base" will work whether the class is a module or not, while the
+    "-base" syntax cannot work that way, since "use" always tries to load a
+    module.
+
   base.pm Caveats
     To make Spiffy work with base.pm a dirty trick was played. Spiffy swaps
-    <base::import> with its own version. If the base modules are not Spiffy,
+    "base::import" with its own version. If the base modules are not Spiffy,
     Spiffy calls the original base::import. If the base modules are Spiffy,
     then Spiffy does its own thing.
 
@@ -237,6 +373,17 @@ USING Spiffy WITH base.pm
         long as all the base classes are Spiffy, or they are all non-Spiffy.
         If they are mixed, Spiffy will die. In this case just use separate
         "use base" statements.
+
+Spiffy TODO LIST
+    Spiffy is a wonderful way to do OO programming in Perl, but it is still
+    a work in progress. New things will be added, and things that don't work
+    well, might be removed.
+
+    One thing I really want to add is mixins. Mixins are good medicine for
+    multiple inheritance headaches. The syntax will use "-mixin" instead of
+    "-base". But I still need to think on exactly how this should work,
+    before implementing it. If you are an OO guru and have good ideas about
+    how this should work, please send me an email.
 
 AUTHOR
     Brian Ingerson <INGY@cpan.org>

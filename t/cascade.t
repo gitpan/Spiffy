@@ -8,14 +8,14 @@ our @EXPORT = qw(cwd);
 
 package Bar;
 use strict;
-Foo->import('-base');
+Foo->base;
 our @EXPORT = qw(doodle);
 sub doodle {}
 sub poodle {}
 
 package Baz;
 use strict;
-Bar->import('-base');
+Bar->base;
 
 package main;
 use strict;

@@ -20,7 +20,7 @@ sub poodle {
 
 package Bar;
 use strict;
-BEGIN { 'Foo'->import('-base') }
+BEGIN { Foo->base }
 
 sub poodle {
     my $self = shift;

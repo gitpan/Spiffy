@@ -2,7 +2,7 @@ package Spiffy;
 use strict;
 use warnings;
 use 5.006_001;
-our $VERSION = '0.11';
+our $VERSION = '0.12';
 
 sub UNIVERSAL::is_spiffy {
     my $self = shift;
@@ -73,6 +73,11 @@ sub spiffy_constructor_maker {
     }
 }
 
+sub base {
+    push @_, '-base';
+    goto &import;
+}
+
 sub import {
     my $self_package = shift;
     my ($args, @values) = $self_package->parse_arguments(@_);
@@ -80,7 +85,7 @@ sub import {
     my $caller_package = $args->{package} || caller;
     no strict 'refs';
     if ($args->{-base}) {
-        unshift @{"${caller_package}::ISA"}, $self_package;
+        push @{"${caller_package}::ISA"}, $self_package;
         for my $sub (qw(import attribute super)) {
             unless (defined $export_map{"!$sub"} or
                     defined &{"${caller_package}::$sub"}

@@ -10,9 +10,10 @@ my $test3 = field test3 => [1..4];
 my $test4 = field test4 => {1..4};
 my $test5 = field test5 => -weaken;
 my $test6 = field test6 => -init => '$self->setup(@_)';
+my $test7 = field test7 => -weak => -init => '$self->setup(@_)';
 
 package main;
-use Test::More tests => 6;
+use Test::More tests => 7;
 
 my @expected = map { s/\r//g; $_ } split /\.\.\.\r?\n/, join '', <DATA>;
 
@@ -85,4 +86,17 @@ sub {
   return $self->{test6} unless @_;
   $self->{test6} = shift;
   return $self->{test6};
+}
+...
+sub {
+  my $self = shift;
+  return do {
+    $self->{test7} = do { $self->setup(@_) };
+    Scalar::Util::weaken($self->{test7}) if ref $self->{test7};
+    $self->{test7};
+  } unless @_ or defined $self->{test7};
+  return $self->{test7} unless @_;
+  $self->{test7} = shift;
+  Scalar::Util::weaken($self->{test7}) if ref $self->{test7};
+  return $self->{test7};
 }

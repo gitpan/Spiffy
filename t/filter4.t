@@ -18,6 +18,8 @@ sub foo {my $self = shift;
     my $x = $self->$bar;
 }
 
+sub one {my $self = shift; }
+sub uno {my $self = shift;}
 $bar = sub {my $self = shift;
     if (1) {
         my $y = 1;

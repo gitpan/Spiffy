@@ -4,7 +4,7 @@ use 5.006_001;
 use warnings;
 use Carp;
 require Exporter;
-our $VERSION = '0.21';
+our $VERSION = '0.22';
 our @EXPORT = ();
 our @EXPORT_BASE = qw(field const stub super);
 our @EXPORT_OK = (@EXPORT_BASE, qw(id WWW XXX YYY ZZZ));
@@ -24,7 +24,9 @@ sub UNIVERSAL::is_spiffy {
 }
 
 sub new {
-    my $self = bless {}, shift;
+    my $class = shift;
+    $class = ref($class) || $class;
+    my $self = bless {}, $class;
     while (@_) {
         my $method = shift;
         $self->$method(shift);
@@ -41,6 +43,9 @@ sub import {
     no warnings;
     my $self_package = shift;
 
+    # XXX Using parse_arguments here might cause confusion, because the
+    # subclass's boolean_arguments and paired_arguments can conflict, causing
+    # difficult debugging. Consider using something truly local.
     my ($args, @export_list) = do {
         local *boolean_arguments = sub { 
             qw(
@@ -171,6 +176,12 @@ my %code = (
     init =>
       "  return \$self->{%s} = do { %s }\n" .
       "    unless \@_ or defined \$self->{%s};\n",
+    weak_init =>
+      "  return do {\n" .
+      "    \$self->{%s} = do { %s };\n" .
+      "    Scalar::Util::weaken(\$self->{%s}) if ref \$self->{%s};\n" .
+      "    \$self->{%s};\n" .
+      "  } unless \@_ or defined \$self->{%s};\n",
     return_if_get => 
       "  return \$self->{%s} unless \@_;\n",
     set => 
@@ -203,8 +214,10 @@ sub field {
           : default_as_code($default);
 
     my $code = $code{sub_start};
-    $code .= sprintf $code{init}, $field, $args->{-init}, $field
-      if $args->{-init};
+    if ($args->{-init}) {
+        my $fragment = $args->{-weak} ? $code{weak_init} : $code{init};
+        $code .= sprintf $fragment, $field, $args->{-init}, ($field) x 4;
+    }
     $code .= sprintf $code{set_default}, $field, $default_string, $field
       if defined $default;
     $code .= sprintf $code{return_if_get}, $field;
@@ -222,6 +235,7 @@ sub field {
 
 sub default_as_code {
     require Data::Dumper;
+    local $Data::Dumper::Sortkeys = 1;
     my $code = Data::Dumper::Dumper(shift);
     $code =~ s/^\$VAR1 = //;
     $code =~ s/;$//;

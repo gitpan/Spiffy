@@ -6,6 +6,8 @@ sub foo {
     my $x = $self->$bar;
 }
 
+sub one { }
+sub uno {}
 my sub bar {
     if (1) {
         my $y = 1;

@@ -167,6 +167,19 @@ Spiffy METHODS
                 $self->bar(42);
             }
 
+    * base
+        This function will call Spiffy::import at runtime, basically making
+        the calling package a subclass of whatever object or class base()
+        was called on.
+
+            package XXX;
+            BEGIN { require YYY; YYY->base }
+
+        is the same as:
+
+            package XXX;
+            use YYY '-base';
+
     * XXX
         The "XXX" method will die with a YAML Dump of all the arguments
         passed to it. Used for debugging.
@@ -181,6 +194,48 @@ Spiffy ARGUMENTS
 
     Any non-paired parameters act like a normal import list; just like those
     used with the Exporter module.
+
+USING Spiffy WITH base.pm
+    The proper way to use a Spiffy module as a base class is with the
+    <-base> parameter to the "use" statement. This differs from typical
+    modules where you would want to "use base".
+
+        package Something;
+        use Spiffy::Module '-base';
+        use base 'NonSpiffy::Module';
+
+    Now it may be hard to keep track of what's Spiffy and what is not.
+    Therefore Spiffy has actually been made to work with base.pm. You can
+    say:
+
+        package Something;
+        use base 'Spiffy::Module';
+        use base 'NonSpiffy::Module';
+
+  base.pm Caveats
+    To make Spiffy work with base.pm a dirty trick was played. Spiffy swaps
+    <base::import> with its own version. If the base modules are not Spiffy,
+    Spiffy calls the original base::import. If the base modules are Spiffy,
+    then Spiffy does its own thing.
+
+    There are two caveats.
+
+    * Spiffy must be loaded first.
+        If Spiffy is not loaded and "use base" is invoked on a Spiffy
+        module, Spiffy will die with a useful message telling the author to
+        read this documentation. That's because Spiffy needed to do the
+        import swap beforehand.
+
+        If you get this error, simply put a statement like this up front in
+        your code:
+
+            use Spiffy ();
+
+    * No Mixing
+        "base.pm" can take multiple arguments. And this works with Spiffy as
+        long as all the base classes are Spiffy, or they are all non-Spiffy.
+        If they are mixed, Spiffy will die. In this case just use separate
+        "use base" statements.
 
 AUTHOR
     Brian Ingerson <INGY@cpan.org>

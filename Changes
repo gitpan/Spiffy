@@ -1,4 +1,9 @@
 ---
+version: 0.13
+date:    Sat Mar 13 09:13:01 PST 2004
+changes:
+- Works with base.pm
+---
 version: 0.12
 date:    Mon Mar  8 11:34:57 PST 2004
 changes:

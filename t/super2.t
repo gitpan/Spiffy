@@ -3,7 +3,7 @@ use strict;
 use warnings;
 
 package Alpha;
-use Spiffy '-Base';
+use Spiffy -Base;
 
 sub three {
     print "ok 6\n";

@@ -1,6 +1,8 @@
 package Something;
 use strict;
-use Thing '-base';
+sub thing { Something->new(@_) }
+our @EXPORT = qw(thing);
+use Thing -base;
 
 field color => 'blue';
 

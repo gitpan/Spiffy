@@ -24,5 +24,5 @@ is(join('-', @Something::ISA), 'Thing');
 ok(not defined &Thing::import);
 ok(defined &Thing::thing);
 ok(defined &Thing::field);
-ok(defined &Thing::spiffy_constructor);
+ok(not defined &Thing::spiffy_constructor);
 is(join('-', @Thing::ISA), 'Spiffy');

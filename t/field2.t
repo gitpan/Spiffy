@@ -3,7 +3,7 @@ use strict;
 use warnings;
 
 package Foo;
-use Spiffy '-base';
+use Spiffy -base;
 field one => [];
 field two => {};
 field three => [1..4];
@@ -18,5 +18,5 @@ my $f2 = Foo->new;
 ok(id($f1->one) ne id($f2->one));
 ok(id($f1->two) ne id($f2->two));
 is(scalar(@{$f1->three}), 4);
-ok(id($f1->three) eq id($f2->three));
-ok(id($f1->four) eq id($f2->four));
+is_deeply($f1->three, $f2->three);
+is_deeply($f1->four, $f2->four);

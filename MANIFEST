@@ -24,9 +24,14 @@ t/export5.t
 t/export6.t
 t/field.t
 t/field2.t
+t/field3.t
 t/filter.t
 t/filter2.t
 t/filter3.t
+t/Filter4.pm
+t/filter4.t
+t/Filter5.pm
+t/filter5.t
 t/mixin.t
 t/mixin2.t
 t/new.t

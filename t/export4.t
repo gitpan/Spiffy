@@ -3,16 +3,16 @@ use strict;
 use warnings;
 
 package A;
-use Spiffy '-base', qw(!field const :XXX);
+use Spiffy -base, qw(!field const :XXX);
 
 package B;
 use base 'A';
 
 package C;
-use Spiffy '-XXX', '-base';
+use Spiffy -XXX, -base;
 
 package D;
-use Spiffy '-base';
+use Spiffy -base;
 
 package main;
 use Test::More tests => 8;

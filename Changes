@@ -1,4 +1,17 @@
 ---
+version: 0.21
+date:    Wed Dec 15 04:40:46 PST 2004
+changes:
+- Get rid of spiffy_constructor altogether
+- Don't use goto in super() anymore, due to irreversible changes in perl 5.8.6
+- Generate custom fieldss base on input. The field function returns the
+  generated code for debugging puposes. (Dave Rolsky)
+- field supports -weaken and -init flags.
+- Caching in all_my_bases to speed things up. (Chris Dent)
+- Filtering now does strict/warnings, '1;\n', and private subs defined with
+  'my sub ...'.
+- Add -filter_dump and -filter_save options for filter debugging
+---
 version: 0.20
 date:    Sat Jul 24 22:11:48 PDT 2004
 changes:

@@ -2,7 +2,7 @@ use lib 't';
 use strict;
 use warnings;
 package A;
-use Spiffy '-base';
+use Spiffy -base;
 field 'x';
 field 'y';
 

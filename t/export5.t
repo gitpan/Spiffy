@@ -3,7 +3,7 @@ use strict;
 use warnings;
 
 package A;
-use Spiffy '-base';
+use Spiffy -base;
 BEGIN {@A::EXPORT_OK = qw(dude)}
 const dude => 10;
 

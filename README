@@ -3,7 +3,7 @@ NAME
 
 SYNOPSIS
         package Keen;
-        use Spiffy '-Base';
+        use Spiffy -Base;
         field 'mirth';
         const mood => ':-)';
     
@@ -35,18 +35,18 @@ DESCRIPTION
     subclasses. You may eventually forget that you're even using it!
 
     The most striking difference between Spiffy and other Perl object
-    oriented base classes, is that it has the ability to export functions.
-    If you create a subclass of Spiffy, all the functions that Spiffy
-    exports will automatically be exported by your subclass, in addition to
-    any more functions that you want to export. And if someone creates a
-    subclass of your subclass, all of those functions will be exported
-    automatically, and so on. Think of it as "Inherited Exportation", and it
-    uses the familiar Exporter.pm specification syntax.
+    oriented base classes, is that it has the ability to export things. If
+    you create a subclass of Spiffy, all the things that Spiffy exports will
+    automatically be exported by your subclass, in addition to any more
+    things that you want to export. And if someone creates a subclass of
+    your subclass, all of those things will be exported automatically, and
+    so on. Think of it as "Inherited Exportation", and it uses the familiar
+    Exporter.pm specification syntax.
 
     To use Spiffy or any subclass of Spiffy as a base class of your class,
     you specify the "-base" argument to the "use" command.
 
-        use MySpiffyBaseModule '-base';
+        use MySpiffyBaseModule -base;
 
     You can also use the traditional "use base 'MySpiffyBaseModule';" syntax
     and everything will work exactly the same. The only caveat is that
@@ -56,8 +56,12 @@ DESCRIPTION
     Spiffy has support for Ruby-like mixins with Perl6-like roles. Just like
     "base" you can use either of the following invocations:
 
-        use MySpiffyBaseModule '-mixin';
         use mixin 'MySpiffyBaseModule';
+        use MySpiffyBaseModule -mixin;
+
+    The second version will only work if the class being mixed in is a
+    subclass of Spiffy. The first version will work in all cases, as long as
+    Spiffy has already been loaded.
 
     To limit the methods that get mixed in, use roles. (Hint: they work just
     like an Exporter list):
@@ -104,15 +108,6 @@ DESCRIPTION
             super;
         }
 
-    Spiffy has an interesting function that it can export called
-    "spiffy_constructor". This function will generate a shortcut function
-    that will call the class's "new" constructor. It is smart enough to know
-    which class to use. All the arguments you pass to the generated
-    function, get passed on to each invocation of the constructor. In
-    addition, all the arguments you passed in the use statement for that
-    class also get passed to the constructor. The "io()" function of IO::All
-    is a good example of using "spiffy_constructor".
-
     Spiffy has a special method for parsing arguments called
     "parse_arguments", that it also uses for parsing its own arguments. You
     declare which arguments are boolean (singletons) and which ones are
@@ -142,13 +137,13 @@ Spiffy EXPORTING
     comprise the export specification.
 
         package Vehicle;
-        use Spiffy '-base';
+        use Spiffy -base;
         our $SERIAL_NUMBER = 0;
         our @EXPORT = qw($SERIAL_NUMBER);
         our @EXPORT_BASE = qw(tire horn);
 
         package Bicycle;
-        use Vehicle '-base', '!field';
+        use Vehicle -base, '!field';
         $self->inflate(tire);
 
     In this case, "Bicycle-"isa('Vehicle')> and also all the things that
@@ -180,9 +175,9 @@ Spiffy MIXINs & ROLEs
     you say:
 
         package A;
-        use B '-base';
-        use C '-mixin';
-        use D '-mixin';
+        use B -base;
+        use C -mixin;
+        use D -mixin;
 
     You end up with a single inheritance chain of classes like this:
 
@@ -225,7 +220,7 @@ Spiffy FILTERING
     performance penalty for creating clean code on par with Ruby and Python.
 
         package Example;
-        use Spiffy '-Base';
+        use Spiffy -Base;
 
         sub crazy {
             $self->nuts;
@@ -238,8 +233,8 @@ Spiffy FILTERING
     is exactly the same as:
 
         package Example;
-        use Spiffy '-base';
-
+        use Spiffy -base;
+        use strict;use warnings;
         sub crazy {my $self = shift;
             $self->nuts;
         }
@@ -247,10 +242,32 @@ Spiffy FILTERING
         sub new {
             bless [], shift;
         }
+        ;1;
 
     Note that the empty parens after the subroutine "new" keep it from
     having a $self added. Also not that the extra code is added to existing
     lines to ensure that line numbers are not altered.
+
+    "-Base" also turns on the strict and warnings pragmas, and adds that
+    annoying '1;' line to your module.
+
+PRIVATE METHODS
+    Spiffy now has support for private methods when you use the '-Base'
+    filter mechanism. You just declare the subs with the "my" keyword, and
+    call them with a '$' in front. Like this:
+
+        package Keen;
+        use SomethingSpiffy -Base;
+
+        # normal public method
+        sub swell {
+            $self->$stinky;
+        }
+
+        # private lexical method. uncallable from outside this file.
+        my sub stinky {
+            ...
+        }
 
 Spiffy DEBUGGING
     The XXX function is very handy for debugging because you can insert it
@@ -284,31 +301,18 @@ Spiffy DEBUGGING
 
     To force the debugging functions to use Data::Dumper instead of YAML:
 
-        use SomeSpiffyModule '-dumper';
-
-Spiffy CONSTRUCTOR
-    Every foundation class has a constructor method to inherit, and Spiffy
-    is no exception. Spiffy has a class method called "new" that creates a
-    new object. It accepts keyword/value pairs as arguments. Each keyword is
-    considered to be a method, and will be called on the new object using
-    the associated value.
-
-        my $sss = SomeSpiffySubclass->new(size => 42);
-
-    If you call the constructor like this, you must ensure that
-    "SomeSpiffySubclass->can('size')".
+        use SomeSpiffyModule -dumper;
 
 Spiffy FUNCTIONS
     This section describes the functions the Spiffy exports. The "field",
     "const", "stub" and "super" functions are only exported when you use the
-    "-base" or "-Base" options. The "spiffy_constructor" is exported if you
-    request it.
+    "-base" or "-Base" options.
 
     * field
         Defines accessor methods for a field of your class:
 
             package Example;
-            use Spiffy '-Base';
+            use Spiffy -Base;
     
             field 'foo';
             field bar => [];
@@ -360,17 +364,6 @@ Spiffy FUNCTIONS
         "super" will simply do nothing if there is no super method. Finally,
         "super" does the right thing in AUTOLOAD subroutines.
 
-    * spiffy_constructor
-        This function generates a function that calls the "new()" method for
-        your class. It passes all its arguments on to "new", as well as any
-        arguments passed to the "use" statement of your class.
-
-            package Example;
-            use Spiffy '-base';
-            our @EXPORT = qw(foo);
-    
-            spiffy_constructor 'foo';
-
 Spiffy METHODS
     This section lists all of the methods that any subclass of Spiffy
     automatically inherits.
@@ -419,10 +412,9 @@ Spiffy METHODS
 Spiffy ARGUMENTS
     When you "use" the Spiffy module or a subclass of it, you can pass it a
     list of arguments. These arguments are parsed using the
-    "parse_arguments" method described above. Any arguments that are pairs
-    are passed on to calls to a spiffy_constructor generated function. The
-    special argument "-base", is used to make the current package a subclass
-    of the Spiffy module being used.
+    "parse_arguments" method described above. The special argument "-base",
+    is used to make the current package a subclass of the Spiffy module
+    being used.
 
     Any non-paired parameters act like a normal import list; just like those
     used with the Exporter module.
@@ -433,7 +425,7 @@ USING Spiffy WITH base.pm
     modules where you would want to "use base".
 
         package Something;
-        use Spiffy::Module '-base';
+        use Spiffy::Module -base;
         use base 'NonSpiffy::Module';
 
     Now it may be hard to keep track of what's Spiffy and what is not.

@@ -3,7 +3,7 @@ use strict;
 use warnings;
 
 package XXX;
-use Spiffy '-base';
+use Spiffy -base;
 stub 'foo';
 
 package YYY;

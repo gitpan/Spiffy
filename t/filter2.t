@@ -3,10 +3,10 @@ use strict;
 use warnings;
 
 package YYY;
-use Spiffy '-Base';
+use Spiffy -Base;
 
 package XXX;
-use Spiffy '-Base';
+use Spiffy -Base;
 
 const name => 'world';
 

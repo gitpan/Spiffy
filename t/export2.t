@@ -2,7 +2,7 @@ use lib 't';
 use strict;
 use warnings;
 package A;
-use Spiffy '-base';
+use Spiffy -base;
 BEGIN {@A::EXPORT = qw($A1 $A2)}
 $A::A1 = 5;
 $A::A2 = 10;

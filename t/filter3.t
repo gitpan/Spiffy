@@ -3,7 +3,7 @@ use strict;
 use warnings;
 
 package BOX;
-use Spiffy '-Base';
+use Spiffy -Base;
 
 package main;
 use Test::More tests => 3;

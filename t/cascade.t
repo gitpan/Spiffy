@@ -2,7 +2,7 @@ use lib 'lib';
 
 package Foo;
 use strict;
-use Spiffy '-base';
+use Spiffy -base;
 use Cwd;
 our @EXPORT = qw(cwd);
 

@@ -4,16 +4,17 @@ use 5.006_001;
 use warnings;
 use Carp;
 require Exporter;
-our $VERSION = '0.20';
+our $VERSION = '0.21';
 our @EXPORT = ();
 our @EXPORT_BASE = qw(field const stub super);
-our @EXPORT_OK = (@EXPORT_BASE, qw(spiffy_constructor id WWW XXX YYY ZZZ));
+our @EXPORT_OK = (@EXPORT_BASE, qw(id WWW XXX YYY ZZZ));
 our %EXPORT_TAGS = (XXX => [qw(WWW XXX YYY ZZZ)]);
 
 my $class_map = {};
 my $options_map = {};
 my $stack_frame = 0; 
 my $dump = 'yaml';
+my $bases_map = {};
 
 sub WWW; sub XXX; sub YYY; sub ZZZ;
 
@@ -32,6 +33,9 @@ sub new {
 }
 
 my $filtered_files = {};
+my $filter_dump = 0;
+my $filter_save = 0;
+our $filter_result = '';
 sub import {
     no strict 'refs'; 
     no warnings;
@@ -39,7 +43,11 @@ sub import {
 
     my ($args, @export_list) = do {
         local *boolean_arguments = sub { 
-            qw(-base -Base -mixin -selfless -XXX -dumper -yaml) 
+            qw(
+                -base -Base -mixin -selfless 
+                -XXX -dumper -yaml 
+                -filter_dump -filter_save
+            ) 
         };
         local *paired_arguments = sub { qw(-package) };
         $self_package->parse_arguments(@_);
@@ -47,6 +55,8 @@ sub import {
     return spiffy_mixin_import(scalar(caller(0)), $self_package, @export_list)
       if $args->{-mixin};
 
+    $filter_dump = 1 if $args->{-filter_dump};
+    $filter_save = 1 if $args->{-filter_save};
     $dump = 'yaml' if $args->{-yaml};
     $dump = 'dumper' if $args->{-dumper};
     if ($args->{-XXX}) {
@@ -65,11 +75,7 @@ sub import {
           not $filtered_files->{(caller($stack_frame))[1]}++;
     }
 
-    local *spiffy_constructor =
-      $self_package->spiffy_constructor_maker($caller_package)
-        unless defined &{"$caller_package\::spiffy_constructor"};
-
-    for my $class (all_my_bases($self_package)) {
+    for my $class (@{all_my_bases($self_package)}) {
         next unless $class->isa('Spiffy');
         for my $sub (@{"$class\::EXPORT"}) {
             $class_map->{$caller_package}{$sub} = $self_package;
@@ -106,72 +112,120 @@ sub spiffy_filter {
     Filter::Util::Call::filter_add(
         sub {
             return 0 if $done;
-            my $data;
+            my ($data, $end) = ('', '');
             while (my $status = Filter::Util::Call::filter_read()) {
                 return $status if $status < 0;
+                if (/^__(?:END|DATA)__\r?$/) {
+                    $end = $_;
+                    last;
+                }
                 $data .= $_;
-                last if /^__(?:END|DATA)__\r?$/;
                 $_ = '';
             }
             $_ = $data;
-            s/^(sub\s+\w+\s+\{)(.*\n)/${1}my \$self = shift;$2/mg;
-            s/^(sub\s+\w+)\s*\(\s*\)(\s+\{.*\n)/${1}${2}/mg;
+            my @my_subs;
+            s[^(sub\s+\w+\s+\{)(.*\n)]
+             [${1}my \$self = shift;$2]gm;
+            s[^(sub\s+\w+)\s*\(\s*\)(\s+\{.*\n)]
+             [${1}${2}]gm;
+            s[^my\s+sub\s+(\w+)(\s+\{)(.*)((?s:.*?\n))\}\n]
+             [push @my_subs, $1; "\$$1 = sub$2my \$self = shift;$3$4\};\n"]gem;
+            my $preclare = '';
+            if (@my_subs) {
+                $preclare = join ',', map "\$$_", @my_subs;
+                $preclare = "my($preclare);";
+            }
+            $_ = "use strict;use warnings;$preclare${_};1;\n$end";
+            if ($filter_dump) { print; exit }
+            if ($filter_save) { $filter_result = $_; $_ = $filter_result; }
             $done = 1;
         }
     );
 }
 
 sub base {
-    push @_, '-base';
+    push @_, -base;
     goto &import;
 }
 
 sub all_my_bases {
     my $class = shift;
+
+    return $bases_map->{$class} 
+      if defined $bases_map->{$class};
+
     my @bases = ($class);
     no strict 'refs';
     for my $base_class (@{"${class}::ISA"}) {
-        push @bases, all_my_bases($base_class);
+        push @bases, @{all_my_bases($base_class)};
     }
     my $used = {};
-    my @x = grep {not $used->{$_}++} @bases;
+    $bases_map->{$class} = [grep {not $used->{$_}++} @bases];
 }
+
+my %code = ( 
+    sub_start => 
+      "sub {\n  my \$self = shift;\n",
+    set_default => 
+      "  \$self->{%s} = %s\n    unless exists \$self->{%s};\n",
+    init =>
+      "  return \$self->{%s} = do { %s }\n" .
+      "    unless \@_ or defined \$self->{%s};\n",
+    return_if_get => 
+      "  return \$self->{%s} unless \@_;\n",
+    set => 
+      "  \$self->{%s} = shift;\n",
+    weaken => 
+      "  Scalar::Util::weaken(\$self->{%s}) if ref \$self->{%s};\n",
+    sub_end => 
+      "  return \$self->{%s};\n}\n",
+);
 
 sub field {
     my $package = caller;
     my ($args, @values) = do {
         no warnings;
-        local *paired_arguments = sub { (qw(-package)) };
+        local *boolean_arguments = sub { (qw(-weak)) };
+        local *paired_arguments = sub { (qw(-package -init)) };
         Spiffy->parse_arguments(@_);
     };
     my ($field, $default) = @values;
     $package = $args->{-package} if defined $args->{-package};
-    no strict 'refs';
+    die "Cannot have a default for a weakened field ($field)"
+        if defined $default && $args->{-weak};
     return if defined &{"${package}::$field"};
-    *{"${package}::$field"} = 
-      (ref($default) eq 'ARRAY' and not @$default)
-      ? sub {
-            my $self = shift;
-            $self->{$field} = []
-              unless exists $self->{$field};
-            return $self->{$field} unless @_;
-            $self->{$field} = shift;
-        }
-      : (ref($default) eq 'HASH' and not @{[%$default]})
-        ? sub {
-              my $self = shift;
-              $self->{$field} = {}
-                unless exists $self->{$field};
-              return $self->{$field} unless @_;
-              $self->{$field} = shift;
-          }
-        : sub {
-              my $self = shift;
-              $self->{$field} = $default
-                unless exists $self->{$field};
-              return $self->{$field} unless @_;
-              $self->{$field} = shift;
-          }
+    require Scalar::Util if $args->{-weak};
+    my $default_string =
+        ( ref($default) eq 'ARRAY' and not @$default )
+        ? '[]'
+        : (ref($default) eq 'HASH' and not keys %$default )
+          ? '{}'
+          : default_as_code($default);
+
+    my $code = $code{sub_start};
+    $code .= sprintf $code{init}, $field, $args->{-init}, $field
+      if $args->{-init};
+    $code .= sprintf $code{set_default}, $field, $default_string, $field
+      if defined $default;
+    $code .= sprintf $code{return_if_get}, $field;
+    $code .= sprintf $code{set}, $field;
+    $code .= sprintf $code{weaken}, $field, $field 
+      if $args->{-weak};
+    $code .= sprintf $code{sub_end}, $field;
+
+    my $sub = eval $code;
+    die $@ if $@;
+    no strict 'refs';
+    *{"${package}::$field"} = $sub;
+    return $code if defined wantarray;
+}
+
+sub default_as_code {
+    require Data::Dumper;
+    my $code = Data::Dumper::Dumper(shift);
+    $code =~ s/^\$VAR1 = //;
+    $code =~ s/;$//;
+    return $code;
 }
 
 sub const {
@@ -204,24 +258,6 @@ sub stub {
         require Carp;
         Carp::confess 
           "Method $field in package $package must be subclassed";
-    }
-}
-
-sub spiffy_constructor_maker {
-    my $spiffy_package = shift;
-    my $caller_package = shift;
-    no strict 'refs';
-    sub {
-        my $name = shift;
-        return if defined &{"${caller_package}::$name"};
-        *{"${caller_package}::$name"} =
-            sub {
-                my $package = caller;
-                my $class = $class_map->{$package}{$name}
-                  or die "No class for ${package}::$name";
-                my $defaults = $options_map->{$package}{$name};
-                $class->new(@$defaults, @_);
-            };
     }
 }
 
@@ -266,16 +302,18 @@ sub id {
 # It's super, man.
 #===============================================================================
 package DB;
-sub super_args { my @dummy = caller(@_ ? $_[0] : 2); @DB::args }
-package Spiffy;
+sub super_args { 
+    my @dummy = caller(@_ ? $_[0] : 2); 
+    return @DB::args;
+}
 
+package Spiffy;
 sub super {
     my $method;
     my $frame = 1;
     while ($method = (caller($frame++))[3]) {
         $method =~ s/.*::// and last;
     }
-
     my @args = DB::super_args($frame);
     @_ = @_ ? ($args[0], @_) : @args;
     my $class = ref $_[0] ? ref $_[0] : $_[0];
@@ -283,17 +321,16 @@ sub super {
     my $seen = 0;
     my @super_classes = reverse grep {
         ($seen or $seen = ($_ eq $caller_class)) ? 0 : 1;
-    } reverse all_my_bases($class);
+    } reverse @{all_my_bases($class)};
     for my $super_class (@super_classes) {
         no strict 'refs';
         next if $super_class eq $class;
         if (defined &{"${super_class}::$method"}) {
             ${"$super_class\::AUTOLOAD"} = ${"$class\::AUTOLOAD"}
               if $method eq 'AUTOLOAD';
-            goto &{"${super_class}::$method"};
+            return &{"${super_class}::$method"};
         }
     }
-    return;
 }
 
 #===============================================================================
@@ -474,7 +511,7 @@ Spiffy - Spiffy Perl Interface Framework For You
 =head1 SYNOPSIS
 
     package Keen;
-    use Spiffy '-Base';
+    use Spiffy -Base;
     field 'mirth';
     const mood => ':-)';
     
@@ -507,18 +544,18 @@ project, Spiffy will automatically pass all of its magic to all of your
 subclasses. You may eventually forget that you're even using it!
 
 The most striking difference between Spiffy and other Perl object
-oriented base classes, is that it has the ability to export functions.
-If you create a subclass of Spiffy, all the functions that Spiffy
+oriented base classes, is that it has the ability to export things.
+If you create a subclass of Spiffy, all the things that Spiffy
 exports will automatically be exported by your subclass, in addition to
-any more functions that you want to export. And if someone creates a
-subclass of your subclass, all of those functions will be exported
+any more things that you want to export. And if someone creates a
+subclass of your subclass, all of those things will be exported
 automatically, and so on. Think of it as "Inherited Exportation", and it
 uses the familiar Exporter.pm specification syntax.
 
 To use Spiffy or any subclass of Spiffy as a base class of your class,
 you specify the C<-base> argument to the C<use> command. 
 
-    use MySpiffyBaseModule '-base';
+    use MySpiffyBaseModule -base;
 
 You can also use the traditional C<use base 'MySpiffyBaseModule';>
 syntax and everything will work exactly the same. The only caveat is
@@ -528,8 +565,12 @@ base.pm on the fly to do all the Spiffy magics.
 Spiffy has support for Ruby-like mixins with Perl6-like roles. Just like
 C<base> you can use either of the following invocations:
 
-    use MySpiffyBaseModule '-mixin';
     use mixin 'MySpiffyBaseModule';
+    use MySpiffyBaseModule -mixin;
+
+The second version will only work if the class being mixed in is a
+subclass of Spiffy.  The first version will work in all cases, as long
+as Spiffy has already been loaded.
 
 To limit the methods that get mixed in, use roles. (Hint: they work just like
 an Exporter list):
@@ -576,15 +617,6 @@ function with Spiffy:
         super;
     }
 
-Spiffy has an interesting function that it can export called
-C<spiffy_constructor>. This function will generate a shortcut function
-that will call the class's "new" constructor. It is smart enough to know
-which class to use. All the arguments you pass to the generated
-function, get passed on to each invocation of the constructor. In
-addition, all the arguments you passed in the use statement for that
-class also get passed to the constructor. The C<io()> function of
-IO::All is a good example of using C<spiffy_constructor>.
-
 Spiffy has a special method for parsing arguments called
 C<parse_arguments>, that it also uses for parsing its own arguments. You
 declare which arguments are boolean (singletons) and which ones are
@@ -615,13 +647,13 @@ Spiffy considers all the arguments that don't begin with a dash to
 comprise the export specification.
 
     package Vehicle;
-    use Spiffy '-base';
+    use Spiffy -base;
     our $SERIAL_NUMBER = 0;
     our @EXPORT = qw($SERIAL_NUMBER);
     our @EXPORT_BASE = qw(tire horn);
 
     package Bicycle;
-    use Vehicle '-base', '!field';
+    use Vehicle -base, '!field';
     $self->inflate(tire);
 
 In this case, C<Bicycle->isa('Vehicle')> and also all the things
@@ -655,9 +687,9 @@ class, and then chains the new class into your SI ISA path. In other
 words, if you say:
 
     package A;
-    use B '-base';
-    use C '-mixin';
-    use D '-mixin';
+    use B -base;
+    use C -mixin;
+    use D -mixin;
 
 You end up with a single inheritance chain of classes like this:
 
@@ -702,7 +734,7 @@ filter. The magic is simple and fast, so there is litte performance penalty
 for creating clean code on par with Ruby and Python.
 
     package Example;
-    use Spiffy '-Base';
+    use Spiffy -Base;
 
     sub crazy {
         $self->nuts;
@@ -715,8 +747,8 @@ for creating clean code on par with Ruby and Python.
 is exactly the same as:
 
     package Example;
-    use Spiffy '-base';
-
+    use Spiffy -base;
+    use strict;use warnings;
     sub crazy {my $self = shift;
         $self->nuts;
     }
@@ -724,10 +756,33 @@ is exactly the same as:
     sub new {
         bless [], shift;
     }
+    ;1;
 
 Note that the empty parens after the subroutine C<new> keep it from
 having a $self added. Also not that the extra code is added to existing lines
 to ensure that line numbers are not altered.
+
+C<-Base> also turns on the strict and warnings pragmas, and adds that
+annoying '1;' line to your module.
+
+=head1 PRIVATE METHODS
+
+Spiffy now has support for private methods when you use the '-Base' filter
+mechanism. You just declare the subs with the C<my> keyword, and call them
+with a C<'$'> in front. Like this:
+
+    package Keen;
+    use SomethingSpiffy -Base;
+
+    # normal public method
+    sub swell {
+        $self->$stinky;
+    }
+
+    # private lexical method. uncallable from outside this file.
+    my sub stinky {
+        ...
+    }
 
 =head1 Spiffy DEBUGGING
 
@@ -762,27 +817,13 @@ export all 4 functions use the export tag:
 
 To force the debugging functions to use Data::Dumper instead of YAML:
 
-    use SomeSpiffyModule '-dumper';
-
-=head1 Spiffy CONSTRUCTOR
-
-Every foundation class has a constructor method to inherit, and Spiffy
-is no exception. Spiffy has a class method called C<new> that creates a
-new object. It accepts keyword/value pairs as arguments. Each keyword is
-considered to be a method, and will be called on the new object using
-the associated value.
-
-    my $sss = SomeSpiffySubclass->new(size => 42);
-
-If you call the constructor like this, you must ensure that 
-C<< SomeSpiffySubclass->can('size') >>.
+    use SomeSpiffyModule -dumper;
 
 =head1 Spiffy FUNCTIONS
 
 This section describes the functions the Spiffy exports. The C<field>,
 C<const>, C<stub> and C<super> functions are only exported when you use
-the C<-base> or C<-Base> options. The C<spiffy_constructor> is exported
-if you request it.
+the C<-base> or C<-Base> options.
 
 =over 4
 
@@ -791,7 +832,7 @@ if you request it.
 Defines accessor methods for a field of your class:
 
     package Example;
-    use Spiffy '-Base';
+    use Spiffy -Base;
     
     field 'foo';
     field bar => [];
@@ -845,18 +886,6 @@ like you'd expect.
 
 C<super> will simply do nothing if there is no super method. Finally,
 C<super> does the right thing in AUTOLOAD subroutines.
-
-=item * spiffy_constructor
-
-This function generates a function that calls the C<new()> method for your
-class. It passes all its arguments on to C<new>, as well as any arguments
-passed to the C<use> statement of your class.
-
-    package Example;
-    use Spiffy '-base';
-    our @EXPORT = qw(foo);
-    
-    spiffy_constructor 'foo';
 
 =back
 
@@ -917,9 +946,8 @@ this method to define your own list.
 =head1 Spiffy ARGUMENTS
 
 When you C<use> the Spiffy module or a subclass of it, you can pass it a
-list of arguments. These arguments are parsed using the C<parse_arguments>
-method described above. Any arguments that are pairs are passed on to
-calls to a spiffy_constructor generated function. The special argument
+list of arguments. These arguments are parsed using the
+C<parse_arguments> method described above. The special argument 
 C<-base>, is used to make the current package a subclass of the Spiffy
 module being used.
 
@@ -933,7 +961,7 @@ parameter to the C<use> statement. This differs from typical modules where you
 would want to C<use base>.
 
     package Something;
-    use Spiffy::Module '-base';
+    use Spiffy::Module -base;
     use base 'NonSpiffy::Module';
 
 Now it may be hard to keep track of what's Spiffy and what is not.

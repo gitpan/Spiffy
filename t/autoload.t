@@ -4,7 +4,7 @@ use warnings;
 use Spiffy ();
 
 package A;
-use Spiffy '-Base';
+use Spiffy -Base;
 
 sub AUTOLOAD {
     super;
@@ -29,4 +29,3 @@ package main;
 use Test::More tests => 1;
 
 is(C->foo(42), 'C::foo+42');
-

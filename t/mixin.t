@@ -4,7 +4,7 @@ no strict 'refs';
 use warnings;
 
 package A;
-use Spiffy '-base';
+use Spiffy -base;
 field 'foo' => 17;
 
 package X;
@@ -23,13 +23,14 @@ use mixin 'BB';
 package main;
 use Test::More tests => 10;
 
-ok(C->can('foo'));
-is(C->foo, 17);
-ok(C->can('extra'));
-is(C->extra, 99);
-ok(C->can('xxx'));
-is(C->xxx, 42);
-ok(not C->can('_zzz'));
+my $c = C->new;
+ok($c->can('foo'));
+is($c->foo, 17);
+ok($c->can('extra'));
+is($c->extra, 99);
+ok($c->can('xxx'));
+is($c->xxx, 42);
+ok(not $c->can('_zzz'));
 is(@{C::ISA}, 1);
 is(${C::ISA}[0], 'C-BB');
 is(${"C-BB::ISA"}[0], 'A');

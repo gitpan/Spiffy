@@ -3,7 +3,7 @@ use strict;
 use warnings;
 
 package XXX;
-use Spiffy '-Base';
+use Spiffy -Base; #, '-filter_dump';
 
 const name => 'world';
 

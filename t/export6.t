@@ -3,10 +3,10 @@ use strict;
 use warnings;
 
 package A;
-use Spiffy '-Base', ':XXX';
+use Spiffy -Base, ':XXX';
 
 package B;
-use Spiffy '-Base', ':XXX', 'field';
+use Spiffy -Base, ':XXX', 'field';
 
 package main;
 use Test::More tests => 4;

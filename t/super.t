@@ -2,7 +2,7 @@ use lib 'lib';
 
 package Foo;
 use strict;
-use Spiffy '-base';
+use Spiffy -base;
 field 'xxx';
 field 'dog';
 field 'bog';

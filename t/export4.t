@@ -15,4 +15,4 @@ ok(defined &B::field);
 ok(defined &A::const);
 ok(defined &B::const);
 ok(defined &A::XXX);
-ok(not defined &B::XXX);
+ok(defined &B::XXX);

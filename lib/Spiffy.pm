@@ -3,14 +3,15 @@ use strict;
 use 5.006_001;
 use warnings;
 use Carp;
-our $VERSION = '0.16';
+our $VERSION = '0.17';
 our @EXPORT = ();
-our @EXPORT_OK = ();
-our %EXPORT_TAGS = ();
+our @EXPORT_OK = qw(id WWW XXX YYY ZZZ);
+our %EXPORT_TAGS = (XXX => [qw(WWW XXX YYY ZZZ)]);
 
 my $class_map = {};
 my $options_map = {};
 my $stack_frame = 0; 
+my $dump = 'yaml';
 
 sub UNIVERSAL::is_spiffy {
     my $self = shift;
@@ -26,23 +27,25 @@ sub new {
     return $self;    
 }
 
+my $filtered_files = {};
 sub import {
     no strict 'refs'; 
     no warnings;
-    local(@EXPORT, @EXPORT_OK, %EXPORT_TAGS, *spiffy_constructor);
+    local(@EXPORT, *spiffy_constructor);
     my $self_package = shift;
     my ($args, @values) = do {
-        local *boolean_arguments = sub { qw(-base -Base) };
+        local *boolean_arguments = sub { qw(-base -Base -dumper -yaml) };
         local *paired_arguments = sub { qw(-package) };
         $self_package->parse_arguments(@_);
     };
+    $dump = 'yaml' if $args->{-yaml};
+    $dump = 'dumper' if $args->{-dumper};
     my $caller_package = $args->{-package} || caller($stack_frame);
     if ($args->{-Base} or $args->{-base}) {
         push @{"${caller_package}::ISA"}, $self_package;
-        spiffy_filter() if $args->{-Base};
-        @EXPORT = qw(field const stub super);
-        @EXPORT_OK = qw(WWW XXX YYY ZZZ);
-        %EXPORT_TAGS = (XXX => [qw(WWW XXX YYY ZZZ)]);
+        spiffy_filter() if $args->{-Base} and 
+          not $filtered_files->{(caller($stack_frame))[1]}++;
+        @EXPORT = qw(field const stub super WWW XXX YYY ZZZ);
         *spiffy_constructor = 
           $self_package->spiffy_constructor_maker($caller_package);
         push @EXPORT, 'spiffy_constructor'
@@ -111,17 +114,29 @@ sub field {
     no strict 'refs';
     return if defined &{"${package}::$field"};
     *{"${package}::$field"} = 
-    sub {
-        my $self = shift;
-        unless (exists $self->{$field}) {
-            $self->{$field} = 
-              ref($default) eq 'ARRAY' ? [] :
-              ref($default) eq 'HASH' ? {} : 
-              $default;
+      (ref($default) eq 'ARRAY' and not @$default)
+      ? sub {
+            my $self = shift;
+            $self->{$field} = []
+              unless exists $self->{$field};
+            return $self->{$field} unless @_;
+            $self->{$field} = shift;
         }
-        return $self->{$field} unless @_;
-        $self->{$field} = shift;
-    }
+      : (ref($default) eq 'HASH' and not @{[%$default]})
+        ? sub {
+              my $self = shift;
+              $self->{$field} = {}
+                unless exists $self->{$field};
+              return $self->{$field} unless @_;
+              $self->{$field} = shift;
+          }
+        : sub {
+              my $self = shift;
+              $self->{$field} = $default
+                unless exists $self->{$field};
+              return $self->{$field} unless @_;
+              $self->{$field} = shift;
+          }
 }
 
 sub const {
@@ -200,6 +215,18 @@ sub parse_arguments {
 sub boolean_arguments { () }
 sub paired_arguments { () }
 
+# get a unique id for any node
+sub id {
+    if (not ref $_[0]) {
+        return 'undef' if not defined $_[0];
+        \$_[0] =~ /\((\w+)\)$/o or die;
+        return "$1-S";
+    }
+    require overload;
+    overload::StrVal($_[0]) =~ /\((\w+)\)$/o or die;
+    return $1;
+}
+
 #===============================================================================
 # It's super, man.
 #===============================================================================
@@ -208,13 +235,14 @@ sub super_args { my @dummy = caller(2); @DB::args }
 package Spiffy;
 
 sub super {
-    @_ = DB::super_args;
+    @_ = DB::super_args unless @_;
     my $class = ref $_[0] ? ref $_[0] : $_[0];
     (my $method = (caller(1))[3]) =~ s/.*:://;
     my $caller_class = caller;
-    my @super_classes = grep {
-        $_ ne $caller_class;
-    } $class->all_my_bases;
+    my $seen = 0;
+    my @super_classes = reverse grep {
+        ($seen or $seen = ($_ eq $caller_class)) ? 0 : 1;
+    } reverse $class->all_my_bases;
     for my $super_class (@super_classes) {
         no strict 'refs';
         next if $super_class eq $class;
@@ -261,7 +289,7 @@ sub spiffy_base_import {
         croak "Can't mix Spiffy and non-Spiffy classes in 'use base'.\n", 
               "See the documentation of Spiffy.pm for details\n  "
           unless $base_class->isa('Spiffy');
-        $stack_frame = 1; # tell import to use differnt caller
+        $stack_frame = 1; # tell import to use different caller
         import($base_class, '-base');
         $stack_frame = 0;
     }
@@ -271,32 +299,41 @@ sub spiffy_base_import {
 #===============================================================================
 # Debugging support
 #===============================================================================
-sub yaml_dump {
-    require YAML;
-    {
-        no warnings;
-        $YAML::UseVersion = 0;
+sub spiffy_dump {
+    no warnings;
+    if ($dump eq 'dumper') {
+        require Data::Dumper;
+        $Data::Dumper::Sortkeys = 1;
+        $Data::Dumper::Indent = 1;
+        return Data::Dumper::Dumper(@_);
     }
-    YAML::Dump(@_);
+    require YAML;
+    $YAML::UseVersion = 0;
+    return YAML::Dump(@_) . "...\n";
+}
+
+sub at_line_number {
+    my ($file_path, $line_number) = (caller(1))[1,2];
+    "  at $file_path line $line_number\n";
 }
 
 sub WWW {
-    warn yaml_dump(@_);
-    @_;
+    warn spiffy_dump(@_) . at_line_number;
+    return wantarray ? @_ : $_[0];
 }
 
 sub XXX {
-    die yaml_dump(@_);
+    die spiffy_dump(@_) . at_line_number;
 }
 
 sub YYY {
-    print yaml_dump(@_);
-    @_;
+    print spiffy_dump(@_) . at_line_number;
+    return wantarray ? @_ : $_[0];
 }
 
 sub ZZZ {
     require Carp;
-    Carp::confess yaml_dump(@_);
+    Carp::confess spiffy_dump(@_);
 }
 
 1;
@@ -396,7 +433,7 @@ that will call the class's "new" constructor. It is smart enough to know
 which class to use. All the arguments you pass to the generated
 function, get passed on to each invocation of the constructor. In
 addition, all the arguments you passed in the use statement for that
-class, also get passed to the constructor. The C<io()> function of
+class also get passed to the constructor. The C<io()> function of
 IO::All is a good example of using C<spiffy_constructor>.
 
 Spiffy has a special method for parsing arguments called
@@ -410,14 +447,15 @@ unmatched arguments.
 Finally, Spiffy exports a few debugging functions C<WWW>, C<XXX>, C<YYY>
 and C<ZZZ>. Each of them produces a YAML dump of its arguments. WWW
 warns the output, XXX dies with the output, YYY prints the output, and
-ZZZ confesses the output.
+ZZZ confesses the output. If YAML doesn't suit your needs, you can switch all
+the dumps to Data::Dumper format with the C<-dumper> option.
 
 That's Spiffy!
 
 =head1 Spiffy EXPORTING
 
 Spiffy implements a completely new idea in Perl. Modules that act both
-as object oriented classes, and that also export functions. But it
+as object oriented classes and that also export functions. But it
 takes the concept of Exporter.pm one step further; it walks the entire
 C<@ISA> path of a class and honors the export specifications of each
 module. Since Spiffy calls on the Exporter module to do this, you can
@@ -508,8 +546,14 @@ arguments. This way you can insert them into many places and still have the
 code run as before. Use ZZZ when you need to die with both a YAML dump and a
 full stack trace.
 
-The debugging functions are not exported by default. To export all 4 functions
-use the export tag C<:XXX>.
+The debugging functions are exported by default if you use the C<-base>
+option. To export all 4 functions use the export tag:
+
+    use SomeSpiffyModule ':XXX';
+
+To force the debugging functions to use Data::Dumper instead of YAML:
+
+    use SomeSpiffyModule '-dumper';
 
 =head1 Spiffy FUNCTIONS
 
@@ -632,7 +676,7 @@ After this call, C<$pairs> will contain:
         -is_yummy => 0,
     }
 
-and C<$others> will contain 'red', 'white', and 'black'.
+and C<@others> will contain 'red', 'white', and 'black'.
 
 =item * boolean_arguments
 
@@ -683,7 +727,7 @@ syntax cannot work that way, since C<use> always tries to load a module.
 
 =head2 base.pm Caveats
 
-To make Spiffy work with base.pm a dirty trick was played. Spiffy swaps
+To make Spiffy work with base.pm, a dirty trick was played. Spiffy swaps
 C<base::import> with its own version. If the base modules are not Spiffy,
 Spiffy calls the original base::import. If the base modules are Spiffy,
 then Spiffy does its own thing.

@@ -1,4 +1,11 @@
 ---
+version: 0.17
+date:    Tue May 11 17:09:00 PDT 2004
+changes:
+- Don't filter a file twice.
+- Make super nestable.
+- Data::Dumper support
+---
 version: 0.16
 date:    Fri May  7 00:57:06 PDT 2004
 changes:

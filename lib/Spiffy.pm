@@ -3,7 +3,7 @@ use strict;
 use 5.006_001;
 use warnings;
 use Carp;
-our $VERSION = '0.14';
+our $VERSION = '0.15';
 
 my $class_map = {};
 my $options_map = {};
@@ -148,7 +148,7 @@ sub parse_arguments {
             push @values, $elem;
         }
     }
-    return ($args, @values);        
+    return wantarray ? ($args, @values) : $args;        
 }
 
 sub boolean_arguments { () }
@@ -270,9 +270,9 @@ base class for implementing other Perl modules using my favorite tricks.
 Spiffy is different from other Perl object oriented base classes, in
 that it has the ability to export functions. If you create a subclass of
 Spiffy, all the functions that Spiffy exports will automatically be
-exported by your subclass, in addition to any functions that you want to
-export. And if someone creates a subclass of your subclass, all of those
-functions will be exported automatically, and so on.
+exported by your subclass, in addition to any more functions that you
+want to export. And if someone creates a subclass of your subclass, all
+of those functions will be exported automatically, and so on.
 
 Spiffy has an interesting function that it exports called
 C<spiffy_constructor()>. This function will generate a function that
@@ -280,7 +280,8 @@ will call the class's "new()" constructor. It is smart enough to know
 which class to use. All the arguments you pass to the generated
 function, get passed on to the constructor. In addition, all the
 arguments you passed in the use statement for that class, also get
-passed to the constructor.
+passed to the constructor. The C<io()> function of IO::All is an
+example.
 
 Spiffy has an interesting way of parsing arguments that you pass to
 C<spiffy_constructor> generated functions, and also to C<use>
@@ -288,9 +289,9 @@ statements. You declare which arguments are boolean (singletons) and
 which ones are paired, with two special functions called
 C<boolean_arguments> and C<paired_arguments>.
 
-Spiffy also exports a function called C<attribute> that you can use to
-declare the attributes of your class. The C<attribute> function will generate
-accessors for you. These attributes can be given defaults values as well.
+Spiffy also exports a function called C<field> that you can use to
+declare the fields of your class. The C<field> function will generate
+accessors for you. These fields can be given defaults values as well.
 
 Perhaps this is all best described through an example. (These are meant
 to be three separate files):
@@ -303,7 +304,7 @@ to be three separate files):
     
     package Something;
     use Thing '-base';
-    attribute size => 0;
+    field size => 0;
     @EXPORT = qw(foo);
     sub foo { ... }
     sub paired_arguments {
@@ -342,20 +343,21 @@ Spiffy defines a few functions that make it Spiffy.
 
 =over 4
 
-=item * attribute
+=item * field
 
-Defines accessor methods for an attribute of your class:
+Defines accessor methods for a field of your class:
 
     package Example;
     use Spiffy '-base';
     
-    attribute 'foo';
-    attribute 'bar' => 42;
+    field 'foo';
+    field const bar => 42;
 
-The first parameter is the name of the attribute. The second optional
-argument is the default value. 
+The C<const> is not a parameter but another function. It tells C<field>
+to generate an immutable accessor. The first parameter is the name of
+the field. The second optional argument is the default value.
 
-The C<attribute> function is only exported if you use the '-base' option.
+The C<field> function is only exported if you use the '-base' option.
 
 =item * spiffy_constructor
 
@@ -369,8 +371,8 @@ passed to the C<use> statement of your class.
     
     spiffy_constructor 'foo';
 
-The C<spiffy_constructor> function is only exported if you use the '-
-base' option.
+The C<spiffy_constructor> function is only exported if you use the 
+'-base' option.
 
 =back
 

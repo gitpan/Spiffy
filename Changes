@@ -1,4 +1,9 @@
 ---
+version: 0.15
+date:    Sun Mar 21 01:54:07 PST 2004
+changes:
+- Make parse_arguments work in scalar context
+---
 version: 0.14
 date:    Sun Mar 21 01:54:07 PST 2004
 changes:

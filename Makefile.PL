@@ -6,4 +6,8 @@ abstract('Spiffy Perl Interface Framework For You');
 version_from('lib/Spiffy.pm');
 license('perl');
 
+requires(qw(
+    perl 5.6.1
+));
+
 &WriteAll;

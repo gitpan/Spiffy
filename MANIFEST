@@ -18,6 +18,7 @@ t/cascade.t
 t/const.t
 t/export1.t
 t/field.t
+t/parse.t
 t/Something.pm
 t/spiffy.t
 t/super.t

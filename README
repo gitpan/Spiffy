@@ -11,9 +11,9 @@ DESCRIPTION
     Spiffy is different from other Perl object oriented base classes, in
     that it has the ability to export functions. If you create a subclass of
     Spiffy, all the functions that Spiffy exports will automatically be
-    exported by your subclass, in addition to any functions that you want to
-    export. And if someone creates a subclass of your subclass, all of those
-    functions will be exported automatically, and so on.
+    exported by your subclass, in addition to any more functions that you
+    want to export. And if someone creates a subclass of your subclass, all
+    of those functions will be exported automatically, and so on.
 
     Spiffy has an interesting function that it exports called
     "spiffy_constructor()". This function will generate a function that will
@@ -21,6 +21,7 @@ DESCRIPTION
     class to use. All the arguments you pass to the generated function, get
     passed on to the constructor. In addition, all the arguments you passed
     in the use statement for that class, also get passed to the constructor.
+    The "io()" function of IO::All is an example.
 
     Spiffy has an interesting way of parsing arguments that you pass to
     "spiffy_constructor" generated functions, and also to "use" statements.
@@ -28,10 +29,9 @@ DESCRIPTION
     paired, with two special functions called "boolean_arguments" and
     "paired_arguments".
 
-    Spiffy also exports a function called "attribute" that you can use to
-    declare the attributes of your class. The "attribute" function will
-    generate accessors for you. These attributes can be given defaults
-    values as well.
+    Spiffy also exports a function called "field" that you can use to
+    declare the fields of your class. The "field" function will generate
+    accessors for you. These fields can be given defaults values as well.
 
     Perhaps this is all best described through an example. (These are meant
     to be three separate files):
@@ -44,7 +44,7 @@ DESCRIPTION
     
         package Something;
         use Thing '-base';
-        attribute size => 0;
+        field size => 0;
         @EXPORT = qw(foo);
         sub foo { ... }
         sub paired_arguments {
@@ -80,20 +80,21 @@ DESCRIPTION
 Spiffy FUNCTIONS
     Spiffy defines a few functions that make it Spiffy.
 
-    * attribute
-        Defines accessor methods for an attribute of your class:
+    * field
+        Defines accessor methods for a field of your class:
 
             package Example;
             use Spiffy '-base';
     
-            attribute 'foo';
-            attribute 'bar' => 42;
+            field 'foo';
+            field const bar => 42;
 
-        The first parameter is the name of the attribute. The second
-        optional argument is the default value.
+        The "const" is not a parameter but another function. It tells
+        "field" to generate an immutable accessor. The first parameter is
+        the name of the field. The second optional argument is the default
+        value.
 
-        The "attribute" function is only exported if you use the '-base'
-        option.
+        The "field" function is only exported if you use the '-base' option.
 
     * spiffy_constructor
         This function generates a function that calls the "new()" method for
@@ -106,8 +107,8 @@ Spiffy FUNCTIONS
     
             spiffy_constructor 'foo';
 
-        The "spiffy_constructor" function is only exported if you use the '-
-        base' option.
+        The "spiffy_constructor" function is only exported if you use the
+        '-base' option.
 
 Spiffy METHODS
     The following subroutines are all methods rather than functions and

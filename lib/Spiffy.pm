@@ -3,7 +3,7 @@ use strict;
 use 5.006_001;
 use warnings;
 use Carp;
-our $VERSION = '0.13';
+our $VERSION = '0.14';
 
 my $class_map = {};
 my $options_map = {};
@@ -26,7 +26,9 @@ sub import {
     no strict 'refs';
     if ($args->{-base}) {
         push @{"${caller_package}::ISA"}, $self_package;
-        for my $sub (qw(import attribute super)) {
+        for my $sub (qw(import attribute field const stub super 
+                        WWW XXX YYY ZZZ)
+        ) {
             unless (defined $export_map{"!$sub"} or
                     defined &{"${caller_package}::$sub"}
                    ) {
@@ -67,24 +69,47 @@ sub all_my_bases {
     my @x = grep {not $used->{$_}++} @bases;
 }
 
-sub attribute {
+{
+    no warnings;
+    *attribute = \&field;
+}
+sub field {
     my $package = caller;
-    my ($attribute, $default) = @_;
+    my ($args, @values) = do {
+        no warnings;
+        local *boolean_arguments = sub { (qw(-stub -const)) };
+        local *paired_arguments = sub { (qw(-package)) };
+        Spiffy->parse_arguments(@_);
+    };
+    my ($field, $default) = @values;
+    $package = $args->{-package} if defined $args->{-package};
     no strict 'refs';
-    return if defined &{"${package}::$attribute"};
-    *{"${package}::$attribute"} =
+    return if defined &{"${package}::$field"};
+    *{"${package}::$field"} = 
+    defined $args->{-stub} ?
+        sub { 
+            require Carp;
+            Carp::confess 
+              "Method $field in package $package must be subclassed";
+        }
+    : defined $args->{-const} ? sub { $default }
+    :
         sub {
             my $self = shift;
-            unless (exists $self->{$attribute}) {
-                $self->{$attribute} = 
+            unless (exists $self->{$field}) {
+                $self->{$field} = 
                   ref($default) eq 'ARRAY' ? [] :
                   ref($default) eq 'HASH' ? {} : 
                   $default;
             }
-            return $self->{$attribute} unless @_;
-            $self->{$attribute} = shift;
-        };
+            return $self->{$field} unless @_;
+            $self->{$field} = shift;
+        }
+    ;
 }
+
+sub const { (-const => @_) }
+sub stub { (-stub => @_) }
 
 sub spiffy_constructor_maker {
     my $spiffy_package = shift;
@@ -200,14 +225,30 @@ sub spiffy_base_import {
 #===============================================================================
 # Debugging support
 #===============================================================================
-sub XXX {
-    my $self = shift;
+sub yaml_dump {
     require YAML;
     {
         no warnings;
         $YAML::UseVersion = 0;
     }
-    die YAML::Dump(@_);
+    YAML::Dump(@_);
+}
+
+sub WWW {
+    warn yaml_dump(@_);
+}
+
+sub XXX {
+    die yaml_dump(@_);
+}
+
+sub YYY {
+    print yaml_dump(@_);
+}
+
+sub ZZZ {
+    require Carp;
+    Carp::confess yaml_dump(@_);
 }
 
 1;

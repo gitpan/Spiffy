@@ -15,7 +15,9 @@ META.yml
 README
 t/base.t
 t/cascade.t
+t/const.t
 t/export1.t
+t/field.t
 t/Something.pm
 t/spiffy.t
 t/super.t

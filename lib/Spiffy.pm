@@ -4,7 +4,7 @@ use 5.006_001;
 use warnings;
 use Carp;
 require Exporter;
-our $VERSION = '0.19';
+our $VERSION = '0.20';
 our @EXPORT = ();
 our @EXPORT_BASE = qw(field const stub super);
 our @EXPORT_OK = (@EXPORT_BASE, qw(spiffy_constructor id WWW XXX YYY ZZZ));
@@ -52,6 +52,7 @@ sub import {
     if ($args->{-XXX}) {
         push @EXPORT_BASE, @{$EXPORT_TAGS{XXX}}
           unless grep /^XXX$/, @EXPORT_BASE;
+        push @export_list, ':XXX';
     }
 
     spiffy_filter() if $args->{-selfless} and 
@@ -265,14 +266,19 @@ sub id {
 # It's super, man.
 #===============================================================================
 package DB;
-sub super_args { my @dummy = caller(2); @DB::args }
+sub super_args { my @dummy = caller(@_ ? $_[0] : 2); @DB::args }
 package Spiffy;
 
 sub super {
-    my @args = DB::super_args;
+    my $method;
+    my $frame = 1;
+    while ($method = (caller($frame++))[3]) {
+        $method =~ s/.*::// and last;
+    }
+
+    my @args = DB::super_args($frame);
     @_ = @_ ? ($args[0], @_) : @args;
     my $class = ref $_[0] ? ref $_[0] : $_[0];
-    (my $method = (caller(1))[3]) =~ s/.*:://;
     my $caller_class = caller;
     my $seen = 0;
     my @super_classes = reverse grep {

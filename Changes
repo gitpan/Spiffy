@@ -1,4 +1,10 @@
 ---
+version: 0.20
+date:    Sat Jul 24 22:11:48 PDT 2004
+changes:
+- call super from eval
+- -XXX implies :XXX
+---
 version: 0.19
 date:    Sun Jul 11 01:41:38 PDT 2004
 changes:

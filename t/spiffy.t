@@ -2,7 +2,7 @@ use lib 'lib';
 
 package Foo;
 use strict;
-use base 'Spiffy';
+use Spiffy '-base';
 
 sub new {
     bless {}, shift;

@@ -1,8 +1,8 @@
 package Spiffy;
-our $VERSION = '0.10';
 use strict;
 use warnings;
-use 5.6.1;
+use 5.006_001;
+our $VERSION = '0.11';
 
 sub UNIVERSAL::is_spiffy {
     my $self = shift;
@@ -11,6 +11,27 @@ sub UNIVERSAL::is_spiffy {
 
 sub new {
     bless {}, shift;
+}
+
+package DB;
+sub super_args { my @dummy = caller(2); @DB::args }
+package Spiffy;
+
+sub super {
+    @_ = DB::super_args;
+    my $class = ref $_[0] ? ref $_[0] : $_[0];
+    (my $method = (caller(1))[3]) =~ s/.*:://;
+    my $caller_class = caller;
+    my @super_classes = grep {
+        $_ ne $caller_class;
+    } $class->all_my_bases;
+    for my $super_class (@super_classes) {
+        no strict 'refs';
+        next if $super_class eq $class;
+        goto &{"${super_class}::$method"}
+          if $super_class->can($method);
+    }
+    return;
 }
 
 sub attribute {
@@ -60,30 +81,26 @@ sub import {
     no strict 'refs';
     if ($args->{-base}) {
         unshift @{"${caller_package}::ISA"}, $self_package;
-        unless (defined &{"${caller_package}::import"}) {
-            *{"${caller_package}::import"} = \&{"${self_package}::import"};
-        }
-        unless (defined $export_map{'!attribute'} or
-                defined &{"${caller_package}::attribute"}) {
-            *{"${caller_package}::attribute"} = 
-              \&{"${self_package}::attribute"};
+        for my $sub (qw(import attribute super)) {
+            unless (defined $export_map{"!$sub"} or
+                    defined &{"${caller_package}::$sub"}
+                   ) {
+                *{"${caller_package}::$sub"} = \&{"${self_package}::$sub"};
+            }
         }
         unless (defined $export_map{'!spiffy_constructor'} or
                 defined &{"${caller_package}::spiffy_constructor"}) {
             *{"${caller_package}::spiffy_constructor"} = 
-            $self_package->
-              spiffy_constructor_maker($caller_package);
+              $self_package->spiffy_constructor_maker($caller_package);
         }
     }
-    else {
-        for my $class ($self_package->all_my_bases) {
-            next unless $class->isa('Spiffy');
-            for my $sub (@{"${class}::EXPORT"}) {
-                unless (defined &{"${caller_package}::$sub"}) {
-                    *{"${caller_package}::$sub"} = \&{"${class}::$sub"};
-                    $class_map->{$caller_package}{$sub} = $self_package;
-                    $options_map->{$caller_package}{$sub} = [@_];
-                }
+    for my $class ($self_package->all_my_bases) {
+        next unless $class->isa('Spiffy');
+        for my $sub (@{"${class}::EXPORT"}) {
+            unless (defined &{"${caller_package}::$sub"}) {
+                *{"${caller_package}::$sub"} = \&{"${class}::$sub"};
+                $class_map->{$caller_package}{$sub} = $self_package;
+                $options_map->{$caller_package}{$sub} = [@_];
             }
         }
     }
@@ -96,7 +113,8 @@ sub all_my_bases {
     for my $base_class (@{"${class}::ISA"}) {
         push @bases, $base_class->all_my_bases;
     }
-    return (keys %{{map {($_, 1)} @bases}});
+    my $used = {};
+    my @x = grep {not $used->{$_}++} @bases;
 }
 
 sub parse_arguments {
@@ -313,6 +331,18 @@ this method to define your own list.
 
 Returns the list of arguments that are recognized as being paired. Override
 this method to define your own list.
+
+=item * super
+
+This function is called without any arguments. It will call the same method
+that it is in, one level higher in the ISA tree, passing it all the same
+arguments.
+
+    sub foo {
+        my self = shift;
+        super;             # Same as $self->SUPER::foo(@_);
+        $self->bar(42);
+    }
 
 =item * XXX
 

@@ -156,6 +156,17 @@ Spiffy METHODS
         Returns the list of arguments that are recognized as being paired.
         Override this method to define your own list.
 
+    * super
+        This function is called without any arguments. It will call the same
+        method that it is in, one level higher in the ISA tree, passing it
+        all the same arguments.
+
+            sub foo {
+                my self = shift;
+                super;             # Same as $self->SUPER::foo(@_);
+                $self->bar(42);
+            }
+
     * XXX
         The "XXX" method will die with a YAML Dump of all the arguments
         passed to it. Used for debugging.

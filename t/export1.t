@@ -16,7 +16,7 @@ ok(not defined &Foo::attribute);
 ok(not defined &Foo::spiffy_constructor);
 
 ok(defined &Something::import);
-ok(not defined &Something::thing);
+ok(defined &Something::thing);
 ok(defined &Something::attribute);
 ok(defined &Something::spiffy_constructor);
 is(join('-', @Something::ISA), 'Thing');

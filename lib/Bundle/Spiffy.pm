@@ -1,7 +1,8 @@
 package Bundle::Spiffy;
 use strict;
-use 5.6.1;
-our $VERSION = '0.10';
+use warnings;
+use 5.006_001;
+our $VERSION = '0.11';
 
 __END__
 
@@ -16,11 +17,15 @@ Bundle::Spiffy - All the CPAN modules that are Spiffy
 =head1 DESCRIPTION
 
 Spiffy is the 'Spiffy Perl Interface Framework For You'. This bundle
-contains all the CPAN modules that have been certified to be Spiffy.
+contains all the Spiffy CPAN modules.
 
 =head1 CONTENTS
 
 Spiffy
+
+IO::All
+
+Pointer
 
 =head1 AUTHOR
 

@@ -1,8 +1,8 @@
 name: Spiffy
-version: 0.10
+version: 0.11
 license: perl
 distribution_type: module
 no_index:
   directory:
     - inc
-generated_by: Module::Install version 0.29
+generated_by: Module::Install version 0.31

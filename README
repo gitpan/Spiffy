@@ -1,0 +1,184 @@
+NAME
+    Spiffy - Spiffy Perl Interface Framework For You
+
+SYNOPSIS
+        use Spiffy '-base';
+   
+DESCRIPTION
+    "Spiffy" is a Perl module interface methodology and framework. It is a
+    base class for implementing other Perl modules using my favorite tricks.
+
+    Spiffy is different from other Perl object oriented base classes, in
+    that it has the ability to export functions. If you create a subclass of
+    Spiffy, all the functions that Spiffy exports will automatically be
+    exported by your subclass, in addition to any functions that you want to
+    export. And if someone creates a subclass of your subclass, all of those
+    functions will be exported automatically, and so on.
+
+    Spiffy has an interesting function that it exports called
+    "spiffy_constructor()". This function will generate a function that will
+    call the class's "new()" constructor. It is smart enough to know which
+    class to use. All the arguments you pass to the generated function, get
+    passed on to the constructor. In addition, all the arguments you passed
+    in the use statement for that class, also get passed to the constructor.
+
+    Spiffy has an interesting way of parsing arguments that you pass to
+    "spiffy_constructor" generated functions, and also to "use" statements.
+    You declare which arguments are boolean (singletons) and which ones are
+    paired, with two special functions called "boolean_arguments" and
+    "paired_arguments".
+
+    Spiffy also exports a function called "attribute" that you can use to
+    declare the attributes of your class. The "attribute" function will
+    generate accessors for you. These attributes can be given defaults
+    values as well.
+
+    Perhaps this is all best described through an example. (These are meant
+    to be three separate files):
+
+        use Something qw(-cool);
+        foo;
+        bar;
+        my $thing = thing(-name => 'Jimmy');
+        $thing->size(11);
+    
+        package Something;
+        use Thing '-base';
+        attribute size => 0;
+        @EXPORT = qw(foo);
+        sub foo { ... }
+        sub paired_arguments {
+            my $self = shift;
+            ('-name', $self->SUPER::paired_arguments)
+        }
+        1;
+   
+        package Thing;
+        use Spiffy '-base';
+        @EXPORT = qw(bar thing);
+        sub bar { ... }
+        spiffy_constructor 'thing';
+        sub boolean_arguments {
+            my $self = shift;
+            ('-cool', $self->SUPER::boolean_arguments)
+        }
+        1;
+
+    The top level program uses a module called "Something". "Something"
+    exports 3 functions: "foo", "bar" and "thing". The "thing" function
+    returns a new "Something" object. The "new()" method for the "Something"
+    class is called with the arguments "<-name =" 'Jimmy'>>, and also with
+    the arguments "<-cool =" 1>>.
+
+    "Something" is a subclass of "Thing" and "Thing" is a subclass of
+    "Spiffy". This is accomplished by importing the base classes with the
+    special parameter "-base". This is similar to using the "base.pm" module
+    except that it does all the extra Spiffy magic.
+
+    That's Spiffy!
+
+Spiffy FUNCTIONS
+    Spiffy defines a few functions that make it Spiffy.
+
+    * attribute
+        Defines accessor methods for an attribute of your class:
+
+            package Example;
+            use Spiffy '-base';
+    
+            attribute 'foo';
+            attribute 'bar' => 42;
+
+        The first parameter is the name of the attribute. The second
+        optional argument is the default value.
+
+        The "attribute" function is only exported if you use the '-base'
+        option.
+
+    * spiffy_constructor
+        This function generates a function that calls the "new()" method for
+        your class. It passes all its arguments on to "new", as well as any
+        arguments passed to the "use" statement of your class.
+
+            package Example;
+            use Spiffy '-base';
+            @EXPORT = qw(foo);
+    
+            spiffy_constructor 'foo';
+
+        The "spiffy_constructor" function is only exported if you use the '-
+        base' option.
+
+Spiffy METHODS
+    The following subroutines are all methods rather than functions and
+    should be called as such. For example:
+
+        $self->parse_arguments(@arguments);
+
+    * is_spiffy
+        Returns true if an object is Spiffy. This method is UNIVERSAL so it
+        can be called on all objects.
+
+    * parse_arguments
+        This method takes a list of arguments and groups them into pairs. It
+        allows for boolean arguments which may or may not have a value
+        (defaulting to 1). The method returns a hash reference of all the
+        pairs as keys and values in the hash. Any arguments that cannot be
+        paired, are returned as a list. Here is an example:
+
+            sub boolean_arguments { qw(-has_spots -is_yummy) }
+            sub paired_arguments { qw(-name -size) }
+            my ($pairs, @others) = $self->parse_arguments(
+                'red', 'white',
+                -name => 'Ingy',
+                -has_spots =>
+                -size => 'large',
+                'black',
+                -is_yummy => 0,
+            );
+
+        After this call, $pairs will contain:
+
+            {
+                -name => 'Ingy',
+                -has_spots => 1,
+                -size => 'large',
+                -is_yummy => 0,
+            }
+
+        and $others will contain 'red', 'white', and 'black'.
+
+    * boolean_arguments
+        Returns the list of arguments that are recognized as being boolean.
+        Override this method to define your own list.
+
+    * paired_arguments
+        Returns the list of arguments that are recognized as being paired.
+        Override this method to define your own list.
+
+    * XXX
+        The "XXX" method will die with a YAML Dump of all the arguments
+        passed to it. Used for debugging.
+
+Spiffy ARGUMENTS
+    When you "use" the Spiffy module or a subclass of it, you can pass it a
+    list of arguments. These arguments are parsed using the
+    "parse_arguments" method described above. Any arguments that are pairs
+    are passed on to calls to a spiffy_constructor generated function. The
+    special argument "-base", is used to make the current package a subclass
+    of the Spiffy module being used.
+
+    Any non-paired parameters act like a normal import list; just like those
+    used with the Exporter module.
+
+AUTHOR
+    Brian Ingerson <INGY@cpan.org>
+
+COPYRIGHT
+    Copyright (c) 2004. Brian Ingerson. All rights reserved.
+
+    This program is free software; you can redistribute it and/or modify it
+    under the same terms as Perl itself.
+
+    See <http://www.perl.com/perl/misc/Artistic.html>
+

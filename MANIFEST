@@ -34,6 +34,7 @@ t/Filter5.pm
 t/filter5.t
 t/mixin.t
 t/mixin2.t
+t/mixin3.t
 t/new.t
 t/package.t
 t/parse.t

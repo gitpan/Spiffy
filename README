@@ -372,6 +372,13 @@ Spiffy METHODS
         Returns true if an object is Spiffy. This method is UNIVERSAL so it
         can be called on all objects.
 
+    * mixin
+        A method to mixin a class at runtime. Takes the same arguments as
+        "use mixin ...". Makes the target class a mixin of the caller.
+
+            $self->mixin('SomeClass');
+            $object->mixin('SomeOtherClass' => 'some_method');
+
     * parse_arguments
         This method takes a list of arguments and groups them into pairs. It
         allows for boolean arguments which may or may not have a value

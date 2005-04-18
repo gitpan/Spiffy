@@ -4,7 +4,7 @@ use 5.006_001;
 use warnings;
 use Carp;
 require Exporter;
-our $VERSION = '0.22';
+our $VERSION = '0.23';
 our @EXPORT = ();
 our @EXPORT_BASE = qw(field const stub super);
 our @EXPORT_OK = (@EXPORT_BASE, qw(id WWW XXX YYY ZZZ));
@@ -345,6 +345,7 @@ sub super {
             return &{"${super_class}::$method"};
         }
     }
+    return;
 }
 
 #===============================================================================
@@ -395,11 +396,18 @@ sub spiffy_base_import {
     }
 }
 
+sub mixin {
+    my $self = shift;
+    my $target_class = ref($self);
+    spiffy_mixin_import($target_class, @_)
+}
+
 sub spiffy_mixin_import {
     my $target_class = shift;
     $target_class = caller(0)
       if $target_class eq 'mixin';
-    my $mixin_class = shift;
+    my $mixin_class = shift
+      or die "Nothing to mixin";
     eval "require $mixin_class";
     my @roles = @_;
     my $pseudo_class = join '-', $target_class, $mixin_class, @roles;
@@ -914,6 +922,14 @@ automatically inherits.
 
 Returns true if an object is Spiffy. This method is UNIVERSAL so it can be
 called on all objects.
+
+=item * mixin
+
+A method to mixin a class at runtime. Takes the same arguments as C<use
+mixin ...>. Makes the target class a mixin of the caller.
+
+    $self->mixin('SomeClass');
+    $object->mixin('SomeOtherClass' => 'some_method');
 
 =item * parse_arguments
 

@@ -22,6 +22,7 @@ t/export3.t
 t/export4.t
 t/export5.t
 t/export6.t
+t/export7.t
 t/field.t
 t/field2.t
 t/field3.t

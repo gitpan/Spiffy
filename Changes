@@ -1,4 +1,11 @@
 ---
+version: 0.24
+date:    Sat Apr 30 23:12:28 PDT 2005
+changes:
+- Refactored -Base to once and only once
+- Remove some cruft
+- Got export algorithm working better
+---
 version: 0.23
 date:    Sun Apr 17 19:01:11 PDT 2005
 changes:

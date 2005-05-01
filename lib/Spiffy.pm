@@ -4,14 +4,12 @@ use 5.006_001;
 use warnings;
 use Carp;
 require Exporter;
-our $VERSION = '0.23';
+our $VERSION = '0.24';
 our @EXPORT = ();
 our @EXPORT_BASE = qw(field const stub super);
 our @EXPORT_OK = (@EXPORT_BASE, qw(id WWW XXX YYY ZZZ));
 our %EXPORT_TAGS = (XXX => [qw(WWW XXX YYY ZZZ)]);
 
-my $class_map = {};
-my $options_map = {};
 my $stack_frame = 0; 
 my $dump = 'yaml';
 my $bases_map = {};
@@ -64,28 +62,24 @@ sub import {
     $filter_save = 1 if $args->{-filter_save};
     $dump = 'yaml' if $args->{-yaml};
     $dump = 'dumper' if $args->{-dumper};
+
+    local @EXPORT_BASE = @EXPORT_BASE;
+
     if ($args->{-XXX}) {
         push @EXPORT_BASE, @{$EXPORT_TAGS{XXX}}
           unless grep /^XXX$/, @EXPORT_BASE;
-        push @export_list, ':XXX';
     }
 
-    spiffy_filter() if $args->{-selfless} and 
-      not $filtered_files->{(caller($stack_frame))[1]}++;
+    spiffy_filter() 
+      if ($args->{-selfless} or $args->{-Base}) and 
+         not $filtered_files->{(caller($stack_frame))[1]}++;
 
     my $caller_package = $args->{-package} || caller($stack_frame);
-    if ($args->{-Base} or $args->{-base}) {
-        push @{"$caller_package\::ISA"}, $self_package;
-        spiffy_filter() if $args->{-Base} and 
-          not $filtered_files->{(caller($stack_frame))[1]}++;
-    }
+    push @{"$caller_package\::ISA"}, $self_package
+      if $args->{-Base} or $args->{-base};
 
     for my $class (@{all_my_bases($self_package)}) {
         next unless $class->isa('Spiffy');
-        for my $sub (@{"$class\::EXPORT"}) {
-            $class_map->{$caller_package}{$sub} = $self_package;
-            $options_map->{$caller_package}{$sub} = [@_];
-        }
         my @export = grep {
             not defined &{"$caller_package\::$_"};
         } ( @{"$class\::EXPORT"}, 
@@ -95,8 +89,12 @@ sub import {
         my @export_ok = grep {
             not defined &{"$caller_package\::$_"};
         } @{"$class\::EXPORT_OK"};
+
+        # Avoid calling the expensive Exporter::export 
+        # if there is nothing to do (optimization)
         my %exportable = map { ($_, 1) } @export, @export_ok;
         next unless keys %exportable;
+
         my @export_save = @{"$class\::EXPORT"};
         my @export_ok_save = @{"$class\::EXPORT_OK"};
         @{"$class\::EXPORT"} = @export;
@@ -781,8 +779,8 @@ is exactly the same as:
     ;1;
 
 Note that the empty parens after the subroutine C<new> keep it from
-having a $self added. Also not that the extra code is added to existing lines
-to ensure that line numbers are not altered.
+having a $self added. Also note that the extra code is added to existing
+lines to ensure that line numbers are not altered.
 
 C<-Base> also turns on the strict and warnings pragmas, and adds that
 annoying '1;' line to your module.

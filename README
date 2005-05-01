@@ -245,7 +245,7 @@ Spiffy FILTERING
         ;1;
 
     Note that the empty parens after the subroutine "new" keep it from
-    having a $self added. Also not that the extra code is added to existing
+    having a $self added. Also note that the extra code is added to existing
     lines to ensure that line numbers are not altered.
 
     "-Base" also turns on the strict and warnings pragmas, and adds that

@@ -1,7 +1,7 @@
 name: Spiffy
-version: 0.24
+version: 0.25
 abstract: Spiffy Perl Interface Framework For You
-author: Brian Ingerson <ingy@cpan.org>
+author: Ingy döt Net <ingy@cpan.org>
 license: perl
 distribution_type: module
 requires:
@@ -11,4 +11,4 @@ requires:
 no_index:
   directory:
     - inc
-generated_by: Module::Install version 0.36
+generated_by: Module::Install version 0.47

@@ -1,4 +1,9 @@
 ---
+version: 0.25
+date:    Mon Jan  9 20:35:39 PST 2006
+changes:
+- Make Spiffy modules play nice with autouse
+---
 version: 0.24
 date:    Sat Apr 30 23:12:28 PDT 2005
 changes:

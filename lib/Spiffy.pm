@@ -1,10 +1,10 @@
 package Spiffy;
 use strict;
-use 5.006_001;
+use 5.006001;
 use warnings;
 use Carp;
 require Exporter;
-our $VERSION = '0.24';
+our $VERSION = '0.25';
 our @EXPORT = ();
 our @EXPORT_BASE = qw(field const stub super);
 our @EXPORT_OK = (@EXPORT_BASE, qw(id WWW XXX YYY ZZZ));
@@ -20,6 +20,19 @@ sub UNIVERSAL::is_spiffy {
     my $self = shift;
     $self->isa('Spiffy');
 }
+
+# This line is here to convince "autouse" into believing we are autousable.
+sub can {
+    ($_[1] eq 'import' and caller()->isa('autouse'))
+        ? \&Exporter::import        # pacify autouse's equality test
+        : $_[0]->SUPER::can($_[1])  # normal case
+}
+
+# TODO
+#
+# Exported functions like field and super should be hidden so as not to
+# be confused with methods that can be inherited.
+#
 
 sub new {
     my $class = shift;
@@ -1045,10 +1058,11 @@ well, might be removed.
 
 =head1 AUTHOR
 
-Brian Ingerson <INGY@cpan.org>
+Ingy döt Net <ingy@cpan.org>
 
 =head1 COPYRIGHT
 
+Copyright (c) 2006. Ingy döt Net. All rights reserved.
 Copyright (c) 2004. Brian Ingerson. All rights reserved.
 
 This program is free software; you can redistribute it and/or modify it

@@ -23,6 +23,7 @@ t/export4.t
 t/export5.t
 t/export6.t
 t/export7.t
+t/exporter.t
 t/field.t
 t/field2.t
 t/field3.t
@@ -45,3 +46,4 @@ t/stub.t
 t/super.t
 t/super2.t
 t/Thing.pm
+SIGNATURE                                Public-key signature (added by MakeMaker)

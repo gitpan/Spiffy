@@ -1,4 +1,9 @@
 ---
+version: 0.26
+date:    Sat Jan 14 05:41:05 PST 2006
+changes:
+- Don't sign the distribution tarball
+---
 version: 0.25
 date:    Mon Jan  9 20:35:39 PST 2006
 changes:

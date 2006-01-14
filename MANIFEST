@@ -41,9 +41,7 @@ t/new.t
 t/package.t
 t/parse.t
 t/Something.pm
-t/spiffy.t
 t/stub.t
 t/super.t
 t/super2.t
 t/Thing.pm
-SIGNATURE                                Public-key signature (added by MakeMaker)

@@ -4,7 +4,7 @@ use 5.006001;
 use warnings;
 use Carp;
 require Exporter;
-our $VERSION = '0.25';
+our $VERSION = '0.26';
 our @EXPORT = ();
 our @EXPORT_BASE = qw(field const stub super);
 our @EXPORT_OK = (@EXPORT_BASE, qw(id WWW XXX YYY ZZZ));
@@ -15,11 +15,6 @@ my $dump = 'yaml';
 my $bases_map = {};
 
 sub WWW; sub XXX; sub YYY; sub ZZZ;
-
-sub UNIVERSAL::is_spiffy {
-    my $self = shift;
-    $self->isa('Spiffy');
-}
 
 # This line is here to convince "autouse" into believing we are autousable.
 sub can {
@@ -928,11 +923,6 @@ This section lists all of the methods that any subclass of Spiffy
 automatically inherits.
 
 =over 4
-
-=item * is_spiffy
-
-Returns true if an object is Spiffy. This method is UNIVERSAL so it can be
-called on all objects.
 
 =item * mixin
 

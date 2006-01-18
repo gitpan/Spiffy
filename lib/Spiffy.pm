@@ -4,7 +4,7 @@ use 5.006001;
 use warnings;
 use Carp;
 require Exporter;
-our $VERSION = '0.26';
+our $VERSION = '0.27';
 our @EXPORT = ();
 our @EXPORT_BASE = qw(field const stub super);
 our @EXPORT_OK = (@EXPORT_BASE, qw(id WWW XXX YYY ZZZ));
@@ -372,14 +372,14 @@ BEGIN {
     *mixin::import = \&spiffy_mixin_import;
 }
 
-my $i = 0;
-while (my $caller = caller($i++)) {
-    next unless $caller eq 'base' or $caller eq 'mixin';
-    croak <<END;
-Spiffy.pm must be loaded before calling 'use base' or 'use mixin' with a
-Spiffy module. See the documentation of Spiffy.pm for details.
-END
-}
+# my $i = 0;
+# while (my $caller = caller($i++)) {
+#     next unless $caller eq 'base' or $caller eq 'mixin';
+#     croak <<END;
+# Spiffy.pm must be loaded before calling 'use base' or 'use mixin' with a
+# Spiffy module. See the documentation of Spiffy.pm for details.
+# END
+# }
 
 sub spiffy_base_import {
     my @base_classes = @_;

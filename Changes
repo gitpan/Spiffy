@@ -1,4 +1,12 @@
 ---
+version: 0.27
+date:    Wed Jan 18 14:14:52 PST 2006
+changes:
+- The check to make sure Spiffy is loaded before 'base' was flawed.
+  Added new tests, and commented out the flawed code until I can figure
+  out how to do the check properly. The check is just a helper so it
+  shouldn't hurt not to have it.
+---
 version: 0.26
 date:    Sat Jan 14 05:41:05 PST 2006
 changes:

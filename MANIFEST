@@ -14,8 +14,10 @@ META.yml
 README
 t/autoload.t
 t/base.t
+t/base2.t
 t/cascade.t
 t/const.t
+t/early.t
 t/export1.t
 t/export2.t
 t/export3.t
@@ -38,6 +40,7 @@ t/mixin.t
 t/mixin2.t
 t/mixin3.t
 t/new.t
+t/NonSpiffy.pm
 t/package.t
 t/parse.t
 t/Something.pm

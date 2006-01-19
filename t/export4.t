@@ -3,7 +3,8 @@ use strict;
 use warnings;
 
 package A;
-use Spiffy -base, qw(const :XXX);
+# Exporter before 5.8.4 needs the tag as the first thing imported
+use Spiffy -base, qw(:XXX const);
 
 package B;
 use base 'A';

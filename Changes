@@ -1,4 +1,9 @@
 ---
+version: 0.28
+date:    Thu Jan 19 07:39:30 PST 2006
+changes:
+- Test patch from Nicholas for older perls
+---
 version: 0.27
 date:    Wed Jan 18 14:14:52 PST 2006
 changes:

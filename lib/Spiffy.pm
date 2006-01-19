@@ -4,7 +4,7 @@ use 5.006001;
 use warnings;
 use Carp;
 require Exporter;
-our $VERSION = '0.28';
+our $VERSION = '0.29';
 our @EXPORT = ();
 our @EXPORT_BASE = qw(field const stub super);
 our @EXPORT_OK = (@EXPORT_BASE, qw(id WWW XXX YYY ZZZ));
@@ -322,9 +322,12 @@ sub id {
 # It's super, man.
 #===============================================================================
 package DB;
-sub super_args { 
-    my @dummy = caller(@_ ? $_[0] : 2); 
-    return @DB::args;
+{
+    no warnings 'redefine';
+    sub super_args { 
+        my @dummy = caller(@_ ? $_[0] : 2); 
+        return @DB::args;
+    }
 }
 
 package Spiffy;

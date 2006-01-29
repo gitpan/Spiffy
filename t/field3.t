@@ -24,79 +24,72 @@ for my $expected (@expected) {
 
 __DATA__
 sub {
-  my $self = shift;
-  $self->{test1} = []
-    unless exists $self->{test1};
-  return $self->{test1} unless @_;
-  $self->{test1} = shift;
-  return $self->{test1};
+  $_[0]->{test1} = []
+    unless exists $_[0]->{test1};
+  return $_[0]->{test1} unless $#_ > 0;
+  $_[0]->{test1} = $_[1];
+  return $_[0]->{test1};
 }
 ...
 sub {
-  my $self = shift;
-  $self->{test2} = {}
-    unless exists $self->{test2};
-  return $self->{test2} unless @_;
-  $self->{test2} = shift;
-  return $self->{test2};
+  $_[0]->{test2} = {}
+    unless exists $_[0]->{test2};
+  return $_[0]->{test2} unless $#_ > 0;
+  $_[0]->{test2} = $_[1];
+  return $_[0]->{test2};
 }
 ...
 sub {
-  my $self = shift;
-  $self->{test3} = [
+  $_[0]->{test3} = [
           1,
           2,
           3,
           4
         ]
 
-    unless exists $self->{test3};
-  return $self->{test3} unless @_;
-  $self->{test3} = shift;
-  return $self->{test3};
+    unless exists $_[0]->{test3};
+  return $_[0]->{test3} unless $#_ > 0;
+  $_[0]->{test3} = $_[1];
+  return $_[0]->{test3};
 }
 ...
 sub {
-  my $self = shift;
-  $self->{test4} = {
+  $_[0]->{test4} = {
           '1' => 2,
           '3' => 4
         }
 
-    unless exists $self->{test4};
-  return $self->{test4} unless @_;
-  $self->{test4} = shift;
-  return $self->{test4};
+    unless exists $_[0]->{test4};
+  return $_[0]->{test4} unless $#_ > 0;
+  $_[0]->{test4} = $_[1];
+  return $_[0]->{test4};
 }
 ...
 sub {
-  my $self = shift;
-  $self->{test5} = '-weaken'
+  $_[0]->{test5} = '-weaken'
 
-    unless exists $self->{test5};
-  return $self->{test5} unless @_;
-  $self->{test5} = shift;
-  return $self->{test5};
+    unless exists $_[0]->{test5};
+  return $_[0]->{test5} unless $#_ > 0;
+  $_[0]->{test5} = $_[1];
+  return $_[0]->{test5};
 }
 ...
 sub {
-  my $self = shift;
-  return $self->{test6} = do { $self->setup(@_) }
-    unless @_ or defined $self->{test6};
-  return $self->{test6} unless @_;
-  $self->{test6} = shift;
-  return $self->{test6};
+  return $_[0]->{test6} = do { my $self = $_[0]; $self->setup(@_) }
+    unless $#_ > 0 or defined $_[0]->{test6};
+  return $_[0]->{test6} unless $#_ > 0;
+  $_[0]->{test6} = $_[1];
+  return $_[0]->{test6};
 }
 ...
 sub {
-  my $self = shift;
   return do {
-    $self->{test7} = do { $self->setup(@_) };
-    Scalar::Util::weaken($self->{test7}) if ref $self->{test7};
-    $self->{test7};
-  } unless @_ or defined $self->{test7};
-  return $self->{test7} unless @_;
-  $self->{test7} = shift;
-  Scalar::Util::weaken($self->{test7}) if ref $self->{test7};
-  return $self->{test7};
+    $_[0]->{test7} = do { my $self = $_[0]; $self->setup(@_) };
+    Scalar::Util::weaken($_[0]->{test7}) if ref $_[0]->{test7};
+    $_[0]->{test7};
+  } unless $#_ > 0 or defined $_[0]->{test7};
+  return $_[0]->{test7} unless $#_ > 0;
+  $_[0]->{test7} = $_[1];
+  Scalar::Util::weaken($_[0]->{test7}) if ref $_[0]->{test7};
+  return $_[0]->{test7};
 }

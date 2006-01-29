@@ -1,4 +1,9 @@
 ---
+version: 0.30
+date:    Sun Jan 29 12:18:02 PST 2006
+changes:
+- Use faster runtime code in `field`.
+---
 version: 0.29
 date:    Thu Jan 19 08:12:06 PST 2006
 changes:

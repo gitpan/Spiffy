@@ -4,7 +4,7 @@ use 5.006001;
 use warnings;
 use Carp;
 require Exporter;
-our $VERSION = '0.29';
+our $VERSION = '0.30';
 our @EXPORT = ();
 our @EXPORT_BASE = qw(field const stub super);
 our @EXPORT_OK = (@EXPORT_BASE, qw(id WWW XXX YYY ZZZ));
@@ -176,26 +176,26 @@ sub all_my_bases {
 
 my %code = ( 
     sub_start => 
-      "sub {\n  my \$self = shift;\n",
+      "sub {\n",
     set_default => 
-      "  \$self->{%s} = %s\n    unless exists \$self->{%s};\n",
+      "  \$_[0]->{%s} = %s\n    unless exists \$_[0]->{%s};\n",
     init =>
-      "  return \$self->{%s} = do { %s }\n" .
-      "    unless \@_ or defined \$self->{%s};\n",
+      "  return \$_[0]->{%s} = do { my \$self = \$_[0]; %s }\n" .
+      "    unless \$#_ > 0 or defined \$_[0]->{%s};\n",
     weak_init =>
       "  return do {\n" .
-      "    \$self->{%s} = do { %s };\n" .
-      "    Scalar::Util::weaken(\$self->{%s}) if ref \$self->{%s};\n" .
-      "    \$self->{%s};\n" .
-      "  } unless \@_ or defined \$self->{%s};\n",
+      "    \$_[0]->{%s} = do { my \$self = \$_[0]; %s };\n" .
+      "    Scalar::Util::weaken(\$_[0]->{%s}) if ref \$_[0]->{%s};\n" .
+      "    \$_[0]->{%s};\n" .
+      "  } unless \$#_ > 0 or defined \$_[0]->{%s};\n",
     return_if_get => 
-      "  return \$self->{%s} unless \@_;\n",
+      "  return \$_[0]->{%s} unless \$#_ > 0;\n",
     set => 
-      "  \$self->{%s} = shift;\n",
+      "  \$_[0]->{%s} = \$_[1];\n",
     weaken => 
-      "  Scalar::Util::weaken(\$self->{%s}) if ref \$self->{%s};\n",
+      "  Scalar::Util::weaken(\$_[0]->{%s}) if ref \$_[0]->{%s};\n",
     sub_end => 
-      "  return \$self->{%s};\n}\n",
+      "  return \$_[0]->{%s};\n}\n",
 );
 
 sub field {

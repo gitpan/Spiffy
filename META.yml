@@ -1,31 +1,28 @@
 ---
 abstract: 'Spiffy Perl Interface Framework For You'
 author:
-  - 'Ingy döt Net <ingy@ingy.net>'
-build_requires:
-  ExtUtils::MakeMaker: 6.59
+  - 'Ingy döt Net <you@your.name>'
+build_requires: {}
 configure_requires:
-  ExtUtils::MakeMaker: 6.59
-distribution_type: module
-dynamic_config: 1
-generated_by: 'Module::Install version 1.06'
+  ExtUtils::MakeMaker: '6.30'
+dynamic_config: 0
+generated_by: 'Dist::Zilla version 5.019, CPAN::Meta::Converter version 2.132830'
 license: perl
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
-  version: 1.4
-module_name: Spiffy
+  version: '1.4'
 name: Spiffy
 no_index:
   directory:
     - inc
     - t
+    - xt
+    - example
 requires:
-  perl: 5.6.1
+  Pre::Req: '0'
+  perl: v5.6.1
 resources:
-  homepage: https://github.com/ingydotnet/spiffy-pm/tree
-  license: http://dev.perl.org/licenses/
-  repository:
-    type: git
-    url: git://github.com/ingydotnet/spiffy-pm.git
-    web: https://github.com/ingydotnet/spiffy-pm/tree
-version: 0.31
+  bugtracker: https://github.com/ingydotnet/spiffy-pm/issues
+  homepage: https://github.com/ingydotnet/spiffy-pm
+  repository: https://github.com/ingydotnet/spiffy-pm.git
+version: '0.32'

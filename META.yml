@@ -19,10 +19,9 @@ no_index:
     - xt
     - example
 requires:
-  Pre::Req: '0'
   perl: v5.6.1
 resources:
   bugtracker: https://github.com/ingydotnet/spiffy-pm/issues
   homepage: https://github.com/ingydotnet/spiffy-pm
   repository: https://github.com/ingydotnet/spiffy-pm.git
-version: '0.32'
+version: '0.33'

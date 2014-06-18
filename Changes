@@ -1,3 +1,6 @@
+0.33 Wed Jun 18 09:50:05 PDT 2014
+ - Removed a boilerplate meta field. mst++
+
 0.32 Tue Jun 17 13:18:12 PDT 2014
  - Release with Zilla::Dist
 

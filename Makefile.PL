@@ -19,19 +19,15 @@ my %WriteMakefileArgs = (
   "EXE_FILES" => [],
   "LICENSE" => "perl",
   "NAME" => "Spiffy",
-  "PREREQ_PM" => {
-    "Pre::Req" => 0
-  },
-  "VERSION" => "0.32",
+  "PREREQ_PM" => {},
+  "VERSION" => "0.33",
   "test" => {
     "TESTS" => "t/*.t"
   }
 );
 
 
-my %FallbackPrereqs = (
-  "Pre::Req" => 0
-);
+my %FallbackPrereqs = ();
 
 
 unless ( eval { ExtUtils::MakeMaker->VERSION(6.63_03) } ) {

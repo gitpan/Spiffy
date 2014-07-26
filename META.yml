@@ -1,7 +1,7 @@
 ---
 abstract: 'Spiffy Perl Interface Framework For You'
 author:
-  - 'Ingy döt Net <you@your.name>'
+  - 'Ingy döt Net <ingy@cpan.org>'
 build_requires: {}
 configure_requires:
   ExtUtils::MakeMaker: '6.30'
@@ -24,4 +24,4 @@ resources:
   bugtracker: https://github.com/ingydotnet/spiffy-pm/issues
   homepage: https://github.com/ingydotnet/spiffy-pm
   repository: https://github.com/ingydotnet/spiffy-pm.git
-version: '0.35'
+version: '0.36'

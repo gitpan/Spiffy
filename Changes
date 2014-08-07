@@ -1,3 +1,6 @@
+0.41 Thu Aug  7 00:28:54 PDT 2014
+ - Fix bad encoding in Pod
+
 0.40 Wed Aug  6 10:29:46 PDT 2014
  - Fix a bug that was causing lots of warnings in Test::Base on perl 5.21
 

@@ -1,3 +1,6 @@
+0.42 Sat Aug  9 00:43:22 PDT 2014
+ - Only support back to 5.8.1
+
 0.41 Thu Aug  7 00:28:54 PDT 2014
  - Fix bad encoding in Pod
 

@@ -1,3 +1,6 @@
+0.44 Sat Aug 16 02:50:17 PDT 2014
+ - Eliminate File::Basename from test/
+
 0.43 Fri Aug 15 20:37:55 PDT 2014
  - Add t/000-compile-modules.t
 

@@ -24,4 +24,4 @@ resources:
   bugtracker: https://github.com/ingydotnet/spiffy-pm/issues
   homepage: https://github.com/ingydotnet/spiffy-pm
   repository: https://github.com/ingydotnet/spiffy-pm.git
-version: '0.43'
+version: '0.44'

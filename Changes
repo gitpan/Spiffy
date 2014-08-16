@@ -1,3 +1,6 @@
+0.43 Fri Aug 15 20:37:55 PDT 2014
+ - Add t/000-compile-modules.t
+
 0.42 Sat Aug  9 00:43:22 PDT 2014
  - Only support back to 5.8.1
 

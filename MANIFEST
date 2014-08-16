@@ -10,6 +10,7 @@ README
 lib/Spiffy.pm
 lib/Spiffy.pod
 lib/Spiffy/mixin.pm
+t/000-compile-modules.t
 t/Filter4.pm
 t/Filter5.pm
 t/NonSpiffy.pm
